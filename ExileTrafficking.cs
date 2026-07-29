@@ -40,6 +40,11 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             if (window == null || !window.IsValid || !window.IsVisible) window = ui.MirageWishesPanel;
             if (window == null || !window.IsValid || !window.IsVisible) return;
 
+            // MirageWishesPanel shares its address with PopUpWindow and DestroyConfirmationWindow,
+            // so the only reliable test is whether the thing actually holds a merc offer
+            var snapshot = Snapshot(window);
+            if (snapshot == null) return;
+
             var rect = window.GetClientRect();
             var (anchorY, buttonHeight) = Anchor(window, rect.Bottom);
 
@@ -56,7 +61,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                         ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing) &&
                     ImGui.Button("Trade Search", new Vector2(160f, buttonHeight)))
                 {
-                    Search(window);
+                    Search(snapshot);
                 }
             }
             finally
@@ -84,11 +89,25 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         return (bottom - 45f - 27f, 45f);
     }
 
-    private void Search(Element window)
-    {
-        var snapshot = ReadPanel(window);
-        if (snapshot == null) return;
+    // ReadPanel walks the subtree, too expensive to redo every frame just to keep the button honest
+    private Element cachedWindow;
+    private MercSnapshot cachedSnapshot;
+    private readonly Stopwatch cacheAge = Stopwatch.StartNew();
 
+    private MercSnapshot Snapshot(Element window)
+    {
+        if (!ReferenceEquals(window, cachedWindow) || cacheAge.ElapsedMilliseconds > 250)
+        {
+            cachedWindow = window;
+            cachedSnapshot = ReadPanel(window);
+            cacheAge.Restart();
+        }
+
+        return cachedSnapshot;
+    }
+
+    private void Search(MercSnapshot snapshot)
+    {
         var league = Settings.LeagueOverride.Value;
         if (string.IsNullOrWhiteSpace(league))
         {
@@ -109,22 +128,22 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     {
         try
         {
-            var archetype = FindText(window, 12, Archetypes);
+            var archetype = FindText(window, 12, Archetypes, true);
             if (archetype == null) return null;
 
-            var container = Descendants(window, 12).FirstOrDefault(x =>
+            var container = Descendants(window, 12, true).FirstOrDefault(x =>
             {
                 var children = x.Children;
                 if (children == null || children.Count < 2) return false;
 
-                return children.All(child => FindText(child, 3, Skills) != null);
+                return children.All(child => FindText(child, 3, Skills, true) != null);
             });
             if (container == null) return null;
 
             var skills = new List<MercSkill>();
             foreach (var row in container.Children)
             {
-                var name = FindText(row, 3, Skills);
+                var name = FindText(row, 3, Skills, true);
                 if (name == null) return null;
 
                 skills.Add(new MercSkill(name, ReadSupports(row)));
@@ -148,8 +167,8 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             .Select(x => x.Name)
             .ToList();
 
-    private static string FindText(Element root, int depth, Dictionary<string, string> table) =>
-        Descendants(root, depth)
+    private static string FindText(Element root, int depth, Dictionary<string, string> table, bool visibleOnly = false) =>
+        Descendants(root, depth, visibleOnly)
             .Select(e =>
             {
                 var text = e?.TextNoTags;
@@ -158,16 +177,20 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             })
             .FirstOrDefault(t => Lookup(table, t) != null);
 
-    private static IEnumerable<Element> Descendants(Element root, int depth)
+    // visibleOnly matters on the panel itself: the popup container keeps every popup as a child and
+    // only flips the local flag, so the merc offer is still sitting there while a confirm dialog is up.
+    // must stay off for tooltip walks, those are hidden until hovered.
+    private static IEnumerable<Element> Descendants(Element root, int depth, bool visibleOnly = false)
     {
         if (root == null) yield break;
+        if (visibleOnly && !root.IsVisibleLocal) yield break;
 
         yield return root;
         if (depth <= 0) yield break;
 
         foreach (var child in root.Children ?? Enumerable.Empty<Element>())
         {
-            foreach (var descendant in Descendants(child, depth - 1))
+            foreach (var descendant in Descendants(child, depth - 1, visibleOnly))
             {
                 yield return descendant;
             }
