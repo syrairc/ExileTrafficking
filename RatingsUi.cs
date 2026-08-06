@@ -19,6 +19,13 @@ public static class RatingsUi
         Buttons[2] = new Controls.GroupButton("X", settings.BrickedColor.Value);
     }
 
+    // leaves the theme's own text colour alone for neutral, so only a real rating stands out
+    private static EColor.StyleColorScope TextFor(Rating rating, ExileTraffickingSettings settings) =>
+        new((ImGuiCol.Text, rating == Rating.Neutral
+            ? ImGui.GetColorU32(ImGuiCol.Text)
+            : EColor.U32(Ratings.Colour(rating, settings.GoodColor.Value, settings.NeutralColor.Value,
+                settings.BrickedColor.Value))));
+
     private static bool Rate(string id, ref Rating rating)
     {
         // fade rather than desaturate the losers, so all three keep their hue and only the pick is full strength
@@ -68,7 +75,7 @@ public static class RatingsUi
 
         ImGui.SetNextItemWidth(-1f);
         ImGui.InputTextWithHint("##et_search", "Search archetypes / skills / supports...", ref search, 64);
-        ImGui.Checkbox("Only show rated", ref onlyRated);
+        ImGui.Checkbox("Only rated archetypes", ref onlyRated);
         ImGui.SameLine();
         ImGui.TextDisabled($"{MercData.BuildsByName.Count(b => b.Skills.Count > 0)} archetypes");
 
@@ -77,7 +84,7 @@ public static class RatingsUi
             var rated = Ratings.Count(settings.Ratings, build.Id);
             if (onlyRated && rated == 0) continue;
 
-            var skills = Visible(build, settings).ToList();
+            var skills = Visible(build).ToList();
             if (skills.Count == 0) continue;
 
             var label = rated > 0
@@ -103,19 +110,13 @@ public static class RatingsUi
         }
     }
 
-    private static IEnumerable<string> Visible(MercBuild build, ExileTraffickingSettings settings)
+    // onlyRated filters archetypes, never their contents: an archetype you opened shows its whole pool
+    private static IEnumerable<string> Visible(MercBuild build)
     {
         var buildMatches = BuildMatches(build);
 
         foreach (var (skill, supports) in build.Skills)
         {
-            if (onlyRated &&
-                Ratings.Skill(settings.Ratings, build.Id, skill) == Rating.Neutral &&
-                !supports.Any(s => Ratings.Support(settings.Ratings, build.Id, skill, s) != Rating.Neutral))
-            {
-                continue;
-            }
-
             if (buildMatches || Matches(skill) || supports.Any(Matches)) yield return skill;
         }
     }
@@ -137,9 +138,12 @@ public static class RatingsUi
         using (Tables.Row(row++))
         {
             ImGui.TableNextColumn();
-            open = ImGui.TreeNodeEx($"{skill}##node", supports.Count == 0
-                ? ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.SpanFullWidth
-                : ImGuiTreeNodeFlags.SpanFullWidth);
+            using (TextFor(rating, settings))
+            {
+                open = ImGui.TreeNodeEx($"{skill}##node", supports.Count == 0
+                    ? ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.SpanFullWidth
+                    : ImGuiTreeNodeFlags.SpanFullWidth);
+            }
 
             ImGui.TableNextColumn();
             if (Rate("##skill", ref rating))
@@ -155,13 +159,15 @@ public static class RatingsUi
             if (!Matches(support) && !Matches(skill) && !BuildMatches(build)) continue;
 
             var value = Ratings.Support(settings.Ratings, build.Id, skill, support);
-            if (onlyRated && value == Rating.Neutral) continue;
 
             using (Tables.Row(row++))
             {
                 ImGui.TableNextColumn();
-                ImGui.TreeNodeEx(support, ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen |
-                                          ImGuiTreeNodeFlags.SpanFullWidth);
+                using (TextFor(value, settings))
+                {
+                    ImGui.TreeNodeEx(support, ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen |
+                                              ImGuiTreeNodeFlags.SpanFullWidth);
+                }
 
                 ImGui.TableNextColumn();
                 if (Rate("##support", ref value))
