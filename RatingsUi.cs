@@ -49,7 +49,7 @@ public static class RatingsUi
         ImGui.SameLine();
         ImGui.Checkbox("Only show rated", ref onlyRated);
         ImGui.SameLine();
-        ImGui.TextDisabled($"{MercData.BuildsByName.Count} archetypes");
+        ImGui.TextDisabled($"{MercData.BuildsByName.Count(b => b.Skills.Count > 0)} archetypes");
 
         foreach (var build in MercData.BuildsByName)
         {
