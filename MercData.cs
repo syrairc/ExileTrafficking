@@ -10,7 +10,7 @@ public sealed class MercBuild
 {
     public string Id { get; init; }
     public string Name { get; init; }
-    public string Infamous { get; init; }
+    public IReadOnlyList<string> Infamous { get; init; }
     public string Class { get; init; }
     public string Path { get; init; }
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Skills { get; init; }
@@ -27,6 +27,7 @@ public static class MercData
 
     public static IReadOnlyDictionary<string, MercBuild> Builds => BuildsById;
     public static IReadOnlyList<MercBuild> BuildsByName { get; }
+    public static IReadOnlyCollection<string> ArchetypeNames => ArchetypeIds.Keys;
 
     static MercData()
     {
@@ -42,7 +43,7 @@ public static class MercData
         foreach (var build in BuildsById.Values)
         {
             BuildsByArchetype[build.Name] = build;
-            if (!string.IsNullOrEmpty(build.Infamous)) BuildsByArchetype[build.Infamous] = build;
+            foreach (var alias in build.Infamous) BuildsByArchetype[alias] = build;
         }
     }
 
@@ -56,8 +57,12 @@ public static class MercData
             ? build
             : null;
 
-    public static MercBuild Infer(IReadOnlyCollection<string> skillNames, string metadataPath)
+    public static MercBuild Infer(IReadOnlyCollection<string> skillNames, string metadataPath) =>
+        Infer(skillNames, metadataPath, out _);
+
+    public static MercBuild Infer(IReadOnlyCollection<string> skillNames, string metadataPath, out bool certain)
     {
+        certain = true;
         if (skillNames == null || skillNames.Count == 0) return null;
 
         var matches = BuildsById.Values
@@ -66,7 +71,12 @@ public static class MercData
         if (matches.Count <= 1) return matches.FirstOrDefault();
 
         var path = PathName(metadataPath);
-        return matches.FirstOrDefault(b => b.Path == path) ?? matches[0];
+        var byPath = matches.Where(b => b.Path == path).ToList();
+        if (byPath.Count == 1) return byPath[0];
+
+        // path didn't narrow it to one, genuinely ambiguous
+        certain = false;
+        return byPath.FirstOrDefault() ?? matches[0];
     }
 
     // "Metadata/Monsters/Mercenaries/MercenaryShadow2@58" -> "MercenaryShadow2"
@@ -99,11 +109,12 @@ public static class MercData
         {
             var skills = value["skills"]?.ToObject<Dictionary<string, List<string>>>()
                          ?? new Dictionary<string, List<string>>();
+            var infamous = value["infamous"]?.ToObject<List<string>>() ?? new List<string>();
             builds[id] = new MercBuild
             {
                 Id = id,
                 Name = (string)value["name"],
-                Infamous = (string)value["infamous"] ?? "",
+                Infamous = infamous,
                 Class = (string)value["class"],
                 Path = (string)value["path"],
                 Skills = skills.ToDictionary(x => x.Key, x => (IReadOnlyList<string>)x.Value),
