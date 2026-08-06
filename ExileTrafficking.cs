@@ -11,9 +11,11 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace ExileTrafficking;
 
-record MercSkill(string Name, IReadOnlyList<string> Supports);
+public record MercSupport(string Name, Element Icon);
 
-record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
+public record MercSkill(string Name, IReadOnlyList<MercSupport> Supports, Element Row);
+
+public record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
 
 public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 {
@@ -45,6 +47,8 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             // so the only reliable test is whether the thing actually holds a merc offer
             var snapshot = Snapshot(window);
             if (snapshot == null) return;
+
+            if (Settings.PanelHighlight) PanelHighlight.Draw(Graphics, snapshot, Settings);
 
             var rect = window.GetClientRect();
             var (anchorY, buttonHeight) = Anchor(window, rect.Bottom);
@@ -147,7 +151,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 var name = FindText(row, 3, MercData.SkillId, true);
                 if (name == null) return null;
 
-                skills.Add(new MercSkill(name, ReadSupports(row)));
+                skills.Add(new MercSkill(name, ReadSupports(row), row));
             }
 
             if (skills.Count == 0) return null;
@@ -160,12 +164,11 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
-    private static List<string> ReadSupports(Element row) =>
+    private static List<MercSupport> ReadSupports(Element row) =>
         Descendants(row, 4)
-            .Select(x => new { Element = x, Name = FindText(x.Tooltip, 3, MercData.SupportId) })
+            .Select(x => new MercSupport(FindText(x.Tooltip, 3, MercData.SupportId), x))
             .Where(x => x.Name != null)
-            .OrderBy(x => x.Element.GetClientRect().X)
-            .Select(x => x.Name)
+            .OrderBy(x => x.Icon.GetClientRect().X)
             .ToList();
 
     private static string FindText(Element root, int depth, Func<string, string> lookup, bool visibleOnly = false) =>
@@ -216,7 +219,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             var filters = new List<object>();
             foreach (var support in skill.Supports)
             {
-                var supportId = MercData.SupportId(support);
+                var supportId = MercData.SupportId(support.Name);
                 if (supportId == null) return null;
 
                 filters.Add(new { id = supportId, disabled = filters.Count >= enabledSupports });
