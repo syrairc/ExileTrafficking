@@ -68,137 +68,11 @@
  "builds": {
   "AurasMinionsTemplarSmite": {
    "class": "AurasMinionsTemplar",
-   "infamous": "Infamous Warpriest",
+   "infamous": [
+    "Infamous Warpriest",
+    "Infamous Warpriest of the Ruckus"
+   ],
    "name": "Warpriest",
-   "path": "MercenaryTemplar2",
-   "skills": {
-    "Beacons of Faith": [
-     "Lesser Cooldown Recovery",
-     "Cooldown Recovery",
-     "Greater Cooldown Recovery",
-     "Second Wind",
-     "Lesser More Duration",
-     "More Duration",
-     "Greater More Duration",
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Brutality",
-     "Brutality",
-     "Greater Brutality",
-     "Lesser Physical as Extra",
-     "Physical as Extra",
-     "Greater Physical as Extra"
-    ],
-    "Dominating Blow": [
-     "Lesser Faster Attacks",
-     "Faster Attacks",
-     "Greater Faster Attacks",
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Minion Damage",
-     "Minion Damage",
-     "Greater Minion Damage",
-     "Lesser Minion Life",
-     "Minion Life",
-     "Greater Minion Life",
-     "Multistrike",
-     "Greater Multistrike",
-     "Lesser Brutality",
-     "Brutality",
-     "Greater Brutality",
-     "Melee Splash",
-     "Hallow"
-    ],
-    "Flame Dash": [
-     "Lesser Cooldown Recovery",
-     "Cooldown Recovery",
-     "Greater Cooldown Recovery",
-     "Lesser Faster Casting",
-     "Faster Casting",
-     "Greater Faster Casting",
-     "Lesser More Duration",
-     "More Duration",
-     "Greater More Duration"
-    ],
-    "Herald of Purity": [
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Brutality",
-     "Brutality",
-     "Greater Brutality",
-     "Lesser Pulverise",
-     "Pulverise",
-     "Greater Pulverise",
-     "Lesser Minion Damage",
-     "Minion Damage",
-     "Greater Minion Damage",
-     "Lesser Minion Life",
-     "Minion Life",
-     "Greater Minion Life",
-     "Multistrike",
-     "Greater Multistrike"
-    ],
-    "Holy Relic": [
-     "Lesser Cooldown Recovery",
-     "Cooldown Recovery",
-     "Greater Cooldown Recovery",
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Brutality",
-     "Brutality",
-     "Greater Brutality",
-     "Lesser Physical as Extra",
-     "Physical as Extra",
-     "Greater Physical as Extra",
-     "Lesser Minion Damage",
-     "Minion Damage",
-     "Greater Minion Damage",
-     "Gilded Relic Recovery"
-    ],
-    "Purity of Lightning": [],
-    "Raise Spectre: Holy Flame Elementals": [],
-    "Smite": [
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Generosity",
-     "Generosity",
-     "Greater Generosity",
-     "Lesser Elemental Damage with Attacks",
-     "Elemental Damage with Attacks",
-     "Greater Elemental Damage with Attacks",
-     "Lesser Faster Attacks",
-     "Faster Attacks",
-     "Greater Faster Attacks",
-     "Gilded Extra Targets"
-    ],
-    "Touch of God": [
-     "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
-     "Greater Area of Effect",
-     "Lesser Shock Chance",
-     "Shock Chance",
-     "Greater Shock Chance",
-     "Lesser Pulverise",
-     "Pulverise",
-     "Greater Pulverise",
-     "Lesser Elemental Damage with Attacks",
-     "Elemental Damage with Attacks",
-     "Greater Elemental Damage with Attacks",
-     "Lesser Concentrated Effect",
-     "Concentrated Effect",
-     "Greater Concentrated Effect"
-    ]
-   }
-  },
-  "AurasMinionsTemplarSmiteRuckusNoble": {
-   "class": "AurasMinionsTemplar",
-   "infamous": "",
-   "name": "Infamous Warpriest of the Ruckus",
    "path": "MercenaryTemplar2",
    "skills": {
     "Beacons of Faith": [
@@ -326,7 +200,9 @@
   },
   "AurasMinionsTemplarSpectres": {
    "class": "AurasMinionsTemplar",
-   "infamous": "Infamous Fallen Reverend",
+   "infamous": [
+    "Infamous Fallen Reverend"
+   ],
    "name": "Fallen Reverend",
    "path": "MercenaryTemplar2",
    "skills": {
@@ -444,7 +320,9 @@
   },
   "AurasMinionsTemplarStaff": {
    "class": "AurasMinionsTemplar",
-   "infamous": "Infamous Cardinal",
+   "infamous": [
+    "Infamous Cardinal"
+   ],
    "name": "Cardinal",
    "path": "MercenaryTemplar2",
    "skills": {
@@ -584,7 +462,9 @@
   },
   "ChaosMinionWitchChaosHit": {
    "class": "ChaosMinionWitch",
-   "infamous": "Infamous Cruel Mistress",
+   "infamous": [
+    "Infamous Cruel Mistress"
+   ],
    "name": "Cruel Mistress",
    "path": "MercenaryWitch2",
    "skills": {
@@ -795,7 +675,9 @@
   },
   "ChaosMinionWitchDot": {
    "class": "ChaosMinionWitch",
-   "infamous": "Infamous Withertouch",
+   "infamous": [
+    "Infamous Withertouch"
+   ],
    "name": "Withertouch",
    "path": "MercenaryWitch2",
    "skills": {
@@ -969,7 +851,9 @@
   },
   "ChaosMinionWitchInstability": {
    "class": "ChaosMinionWitch",
-   "infamous": "Infamous Reanimator",
+   "infamous": [
+    "Infamous Reanimator"
+   ],
    "name": "Reanimator",
    "path": "MercenaryWitch2",
    "skills": {
@@ -1134,7 +1018,9 @@
   },
   "Crit1HShadowPhysSpell": {
    "class": "Crit1HShadow",
-   "infamous": "Infamous Bladecaster",
+   "infamous": [
+    "Infamous Bladecaster"
+   ],
    "name": "Bladecaster",
    "path": "MercenaryShadow2",
    "skills": {
@@ -1298,7 +1184,9 @@
   },
   "Crit1HShadowPoison": {
    "class": "Crit1HShadow",
-   "infamous": "Infamous Bladebitter",
+   "infamous": [
+    "Infamous Bladebitter"
+   ],
    "name": "Bladebitter",
    "path": "MercenaryShadow2",
    "skills": {
@@ -1469,16 +1357,16 @@
   },
   "Crit1HShadowSpectral": {
    "class": "Crit1HShadow",
-   "infamous": "",
+   "infamous": [],
    "name": "Bladereach",
    "path": "MercenaryShadow2",
-   "skills": {
-    "Do Nothing": []
-   }
+   "skills": {}
   },
   "DivingDuelist": {
    "class": "MeleeAOEStrikeDuelist",
-   "infamous": "Infamous Mysterious Diver",
+   "infamous": [
+    "Infamous Mysterious Diver"
+   ],
    "name": "Mysterious Diver",
    "path": "MercenaryDuelist2",
    "skills": {
@@ -1521,8 +1409,6 @@
      "Lesser Pierce",
      "Pierce",
      "Greater Pierce",
-     "Lesser Chain",
-     "Chain",
      "Lesser Cold Penetration",
      "Cold Penetration",
      "Greater Cold Penetration",
@@ -1582,17 +1468,12 @@
      "Lesser Hypothermia",
      "Hypothermia",
      "Greater Hypothermia",
-     "Multiple Projectiles",
      "Lesser Faster Attacks",
      "Faster Attacks",
      "Greater Faster Attacks",
      "Gilded Elemental Weakness on Hit",
      "Multistrike",
      "Greater Multistrike",
-     "Greater Multiple Projectiles",
-     "Lesser Added Cold",
-     "Added Cold",
-     "Greater Added Cold",
      "Lesser Added Lightning",
      "Added Lightning",
      "Greater Added Lightning"
@@ -1601,7 +1482,9 @@
   },
   "EleBowRangerClones": {
    "class": "EleBowRanger",
-   "infamous": "Infamous Manyshot",
+   "infamous": [
+    "Infamous Manyshot"
+   ],
    "name": "Manyshot",
    "path": "MercenaryRanger2",
    "skills": {
@@ -1773,7 +1656,9 @@
   },
   "EleBowRangerFire": {
    "class": "EleBowRanger",
-   "infamous": "Infamous Flamequiver",
+   "infamous": [
+    "Infamous Flamequiver"
+   ],
    "name": "Flamequiver",
    "path": "MercenaryRanger2",
    "skills": {
@@ -1952,7 +1837,7 @@
   },
   "EleBowRangerLightning": {
    "class": "EleBowRanger",
-   "infamous": "",
+   "infamous": [],
    "name": "Thunderquiver",
    "path": "MercenaryRanger2",
    "skills": {
@@ -2100,7 +1985,9 @@
   },
   "ElementalWitchCold": {
    "class": "ElementalWitch",
-   "infamous": "Infamous Frosthand",
+   "infamous": [
+    "Infamous Frosthand"
+   ],
    "name": "Frosthand",
    "path": "MercenaryWitch1",
    "skills": {
@@ -2300,7 +2187,7 @@
   },
   "ElementalWitchFire": {
    "class": "ElementalWitch",
-   "infamous": "",
+   "infamous": [],
    "name": "Flamehand",
    "path": "MercenaryWitch1",
    "skills": {
@@ -2511,7 +2398,9 @@
   },
   "ElementalWitchLightning": {
    "class": "ElementalWitch",
-   "infamous": "Infamous Stormhand",
+   "infamous": [
+    "Infamous Stormhand"
+   ],
    "name": "Stormhand",
    "path": "MercenaryWitch1",
    "skills": {
@@ -2715,24 +2604,14 @@
      "Greater Elemental Focus",
      "Gilded Voltage"
     ],
-    "Wrath": [],
-    "[DNT] Unused": [
-     "Greater Lucky Lightning Damage",
-     "Lesser Faster Casting",
-     "Faster Casting",
-     "Greater Faster Casting",
-     "Lesser Lightning Penetration",
-     "Lightning Penetration",
-     "Greater Lightning Penetration",
-     "Lesser Shock Chance",
-     "Shock Chance",
-     "Greater Shock Chance"
-    ]
+    "Wrath": []
    }
   },
   "MeleeAOEMarauderFireSlam": {
    "class": "MeleeAOEMarauder",
-   "infamous": "Infamous Eruptor",
+   "infamous": [
+    "Infamous Eruptor"
+   ],
    "name": "Eruptor",
    "path": "MercenaryMarauder1",
    "skills": {
@@ -2901,7 +2780,9 @@
   },
   "MeleeAOEMarauderNonSlam": {
    "class": "MeleeAOEMarauder",
-   "infamous": "Infamous Ripper",
+   "infamous": [
+    "Infamous Ripper"
+   ],
    "name": "Ripper",
    "path": "MercenaryMarauder1",
    "skills": {
@@ -3079,7 +2960,9 @@
   },
   "MeleeAOEMarauderPhysSlam": {
    "class": "MeleeAOEMarauder",
-   "infamous": "Infamous Earthshaker",
+   "infamous": [
+    "Infamous Earthshaker"
+   ],
    "name": "Earthshaker",
    "path": "MercenaryMarauder1",
    "skills": {
@@ -3291,7 +3174,9 @@
   },
   "MeleeAOEStrikeDuelistCyclone": {
    "class": "MeleeAOEStrikeDuelist",
-   "infamous": "Infamous Swiftblade",
+   "infamous": [
+    "Infamous Swiftblade"
+   ],
    "name": "Swiftblade",
    "path": "MercenaryDuelist2",
    "skills": {
@@ -3432,7 +3317,9 @@
   },
   "MeleeAOEStrikeDuelistRangeStrikes": {
    "class": "MeleeAOEStrikeDuelist",
-   "infamous": "Infamous Combatant",
+   "infamous": [
+    "Infamous Combatant"
+   ],
    "name": "Combatant",
    "path": "MercenaryDuelist2",
    "skills": {
@@ -3449,8 +3336,6 @@
      "Lesser Pierce",
      "Pierce",
      "Greater Pierce",
-     "Lesser Chain",
-     "Chain",
      "Lesser Cold Penetration",
      "Cold Penetration",
      "Greater Cold Penetration",
@@ -3556,17 +3441,12 @@
      "Lesser Hypothermia",
      "Hypothermia",
      "Greater Hypothermia",
-     "Multiple Projectiles",
      "Lesser Faster Attacks",
      "Faster Attacks",
      "Greater Faster Attacks",
      "Gilded Elemental Weakness on Hit",
      "Multistrike",
      "Greater Multistrike",
-     "Greater Multiple Projectiles",
-     "Lesser Added Cold",
-     "Added Cold",
-     "Greater Added Cold",
      "Lesser Added Lightning",
      "Added Lightning",
      "Greater Added Lightning"
@@ -3576,7 +3456,9 @@
   },
   "MeleeStrikesMaraduerPhys": {
    "class": "MeleeStrikesMarauder",
-   "infamous": "Infamous Striker",
+   "infamous": [
+    "Infamous Striker"
+   ],
    "name": "Striker",
    "path": "MercenaryMarauder2",
    "skills": {
@@ -3750,7 +3632,7 @@
   },
   "MeleeStrikesMarauderFire": {
    "class": "MeleeStrikesMarauder",
-   "infamous": "",
+   "infamous": [],
    "name": "Smoulderstrike",
    "path": "MercenaryMarauder2",
    "skills": {
@@ -3774,8 +3656,6 @@
      "Lesser Pierce",
      "Pierce",
      "Greater Pierce",
-     "Lesser Chain",
-     "Chain",
      "Lesser Added Fire",
      "Added Fire",
      "Greater Added Fire",
@@ -3912,7 +3792,9 @@
   },
   "MiscScionPhysDot": {
    "class": "MiscScion",
-   "infamous": "Infamous Sanguimancer",
+   "infamous": [
+    "Infamous Sanguimancer"
+   ],
    "name": "Sanguimancer",
    "path": "MercenaryScion1",
    "skills": {
@@ -3944,9 +3826,6 @@
      "Lesser DoT Multiplier",
      "DoT Multiplier",
      "Greater DoT Multiplier",
-     "Lesser Swift Affliction",
-     "Swift Affliction",
-     "Greater Swift Affliction",
      "Lesser Brutality",
      "Brutality",
      "Greater Brutality"
@@ -4045,9 +3924,6 @@
      "Lesser Swift Affliction",
      "Swift Affliction",
      "Greater Swift Affliction",
-     "Lesser DoT Multiplier",
-     "DoT Multiplier",
-     "Greater DoT Multiplier",
      "Lesser Mitigation Ignore",
      "Mitigation Ignore",
      "Greater Mitigation Ignore",
@@ -4131,7 +4007,9 @@
   },
   "MiscScionWandAttacks": {
    "class": "MiscScion",
-   "infamous": "Infamous Kineticist",
+   "infamous": [
+    "Infamous Kineticist"
+   ],
    "name": "Kineticist",
    "path": "MercenaryScion1",
    "skills": {
@@ -4359,7 +4237,9 @@
   },
   "NonEleBowRangerChaos": {
    "class": "NonEleBowRanger",
-   "infamous": "Infamous Toxicologist",
+   "infamous": [
+    "Infamous Toxicologist"
+   ],
    "name": "Toxicologist",
    "path": "MercenaryRanger1",
    "skills": {
@@ -4534,7 +4414,9 @@
   },
   "NonEleBowRangerPhys": {
    "class": "NonEleBowRanger",
-   "infamous": "Infamous Sniper",
+   "infamous": [
+    "Infamous Sniper"
+   ],
    "name": "Sniper",
    "path": "MercenaryRanger1",
    "skills": {
@@ -4790,7 +4672,7 @@
   },
   "PhysConvertTemplarCold": {
    "class": "PhysConvertTemplar",
-   "infamous": "",
+   "infamous": [],
    "name": "Winter Deacon",
    "path": "MercenaryTemplar1",
    "skills": {
@@ -4944,7 +4826,7 @@
   },
   "PhysConvertTemplarFire": {
    "class": "PhysConvertTemplar",
-   "infamous": "",
+   "infamous": [],
    "name": "Flaming Charlatan",
    "path": "MercenaryTemplar1",
    "skills": {
@@ -5106,7 +4988,9 @@
   },
   "PhysConvertTemplarLightning": {
    "class": "PhysConvertTemplar",
-   "infamous": "Infamous Storming Zealot",
+   "infamous": [
+    "Infamous Storming Zealot"
+   ],
    "name": "Storming Zealot",
    "path": "MercenaryTemplar1",
    "skills": {
@@ -5276,7 +5160,9 @@
   },
   "PhysicalDuelistBleed": {
    "class": "PhysicalDuelist",
-   "infamous": "Infamous Bloodletter",
+   "infamous": [
+    "Infamous Bloodletter"
+   ],
    "name": "Bloodletter",
    "path": "MercenaryDuelist1",
    "skills": {
@@ -5411,7 +5297,9 @@
   },
   "PhysicalDuelistShields": {
    "class": "PhysicalDuelist",
-   "infamous": "Infamous Bastion",
+   "infamous": [
+    "Infamous Bastion"
+   ],
    "name": "Bastion",
    "path": "MercenaryDuelist1",
    "skills": {
@@ -5511,7 +5399,7 @@
   },
   "PhysicalDuelistSteel": {
    "class": "PhysicalDuelist",
-   "infamous": "",
+   "infamous": [],
    "name": "Shattersword",
    "path": "MercenaryDuelist1",
    "skills": {
@@ -5637,7 +5525,9 @@
   },
   "TrapsMinesShadowAttack": {
    "class": "TrapsMinesShadow",
-   "infamous": "Infamous Blade Ambusher",
+   "infamous": [
+    "Infamous Blade Ambusher"
+   ],
    "name": "Blade Ambusher",
    "path": "MercenaryShadow1",
    "skills": {
@@ -5661,7 +5551,6 @@
     ],
     "Blade Trap": [
      "Lesser Increased Area of Effect",
-     "Increased Area of Effect",
      "Increased Area of Effect",
      "Lesser Throwing Speed",
      "Throwing Speed",
@@ -5772,7 +5661,7 @@
   },
   "TrapsMinesShadowCold": {
    "class": "TrapsMinesShadow",
-   "infamous": "",
+   "infamous": [],
    "name": "Frost Ambusher",
    "path": "MercenaryShadow1",
    "skills": {
@@ -5902,7 +5791,9 @@
   },
   "TrapsMinesShadowLightning": {
    "class": "TrapsMinesShadow",
-   "infamous": "Infamous Shock Ambusher",
+   "infamous": [
+    "Infamous Shock Ambusher"
+   ],
    "name": "Shock Ambusher",
    "path": "MercenaryShadow1",
    "skills": {
@@ -6091,7 +5982,6 @@
   "ActionSpeedAuraMercenary": "Trarthan Agility",
   "AlchemistsMarkMercenary": "Alchemist's Mark",
   "AngerMercenary": "Anger",
-  "ArcAltMercenary": "[DNT] Unused",
   "ArcMercenary": "Arc",
   "ArcticArmourMercenary": "Arctic Armour",
   "ArtilleryBallistaMercenary": "Artillery Ballista",
@@ -6146,7 +6036,6 @@
   "DisciplineMercenary": "Discipline",
   "DivineIreMercenary": "Divine Ire",
   "DivineRetributionMercenary": "Divine Retribution",
-  "DoLiterallyNothing": "Do Nothing",
   "DominatingBlowMercenary": "Dominating Blow",
   "DonutBladesMercenary": "Triggerblades",
   "DonutCircleMercenary": "Seismic Crush",
@@ -6238,7 +6127,6 @@
   "LightningWarpMercenary": "Lightning Warp",
   "LightningWarpPhysMercenary": "Bloody Warp",
   "LightningWarpTrapsMercenary": "Lightning Warp Trap",
-  "LunarisSpellBarrageTrapMercenary": "[DNT] UNUSED",
   "MalevolenceMercenary": "Malevolence",
   "MassEnduranceMercenary": "Endure",
   "MassFrenzyMercenary": "Incite",
@@ -6253,7 +6141,6 @@
   "OrbOfStormsMercenary": "Orb of Storms",
   "PerforateMercenary": "Perforate",
   "PestilentStrikeMercenary": "Pestilent Strike",
-  "PhysStormCallMercenary": "[DNT] Unused",
   "PhysicalAegisMercenary": "Physical Aegis",
   "PhysicalBeaconMercenary": "Beacons of Faith",
   "PoachersMarkMercenary": "Poacher's Mark",
