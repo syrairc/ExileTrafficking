@@ -7,12 +7,27 @@ namespace ExileTrafficking;
 
 public static class RatingsUi
 {
-    private static readonly (string Label, Rating Value)[] Options =
+    private static readonly Rating[] Options = { Rating.Good, Rating.Neutral, Rating.Bricked };
+
+    // rebuilt each frame from the colour settings, so the buttons match the panel boxes and the overlay
+    private static readonly Controls.GroupButton[] Buttons = new Controls.GroupButton[3];
+
+    private static void SyncButtons(ExileTraffickingSettings settings)
     {
-        ("G", Rating.Good),
-        ("-", Rating.Neutral),
-        ("X", Rating.Bricked),
-    };
+        Buttons[0] = new Controls.GroupButton("G", settings.GoodColor.Value);
+        Buttons[1] = new Controls.GroupButton("-", settings.NeutralColor.Value);
+        Buttons[2] = new Controls.GroupButton("X", settings.BrickedColor.Value);
+    }
+
+    private static bool Rate(string id, ref Rating rating)
+    {
+        // fade rather than desaturate the losers, so all three keep their hue and only the pick is full strength
+        var clicked = Controls.ButtonGroup(id, Buttons, System.Array.IndexOf(Options, rating));
+        if (clicked < 0) return false;
+
+        rating = Options[clicked];
+        return true;
+    }
 
     private static string search = "";
     private static bool onlyRated;
@@ -49,6 +64,8 @@ public static class RatingsUi
 
     private static void DrawRatings(ExileTraffickingSettings settings)
     {
+        SyncButtons(settings);
+
         ImGui.SetNextItemWidth(-1f);
         ImGui.InputTextWithHint("##et_search", "Search archetypes / skills / supports...", ref search, 64);
         ImGui.Checkbox("Only show rated", ref onlyRated);
@@ -125,7 +142,7 @@ public static class RatingsUi
                 : ImGuiTreeNodeFlags.SpanFullWidth);
 
             ImGui.TableNextColumn();
-            if (Controls.Segmented("##skill", ref rating, Options))
+            if (Rate("##skill", ref rating))
             {
                 Ratings.SetSkill(settings.Ratings, build.Id, skill, rating);
             }
@@ -147,7 +164,7 @@ public static class RatingsUi
                                           ImGuiTreeNodeFlags.SpanFullWidth);
 
                 ImGui.TableNextColumn();
-                if (Controls.Segmented("##support", ref value, Options))
+                if (Rate("##support", ref value))
                 {
                     Ratings.SetSupport(settings.Ratings, build.Id, skill, support, value);
                 }
