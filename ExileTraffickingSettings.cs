@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using ExileCore.Shared.Attributes;
 using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
+using SharpDX;
 
 namespace ExileTrafficking;
 
@@ -19,4 +21,27 @@ public class ExileTraffickingSettings : ISettings
 
     [Menu("Button Y nudge", "Nudge from the game's own button row.")]
     public RangeNode<int> ButtonNudgeY { get; set; } = new RangeNode<int>(0, -2000, 2000);
+
+    [Menu("Highlight rated skills in the encounter panel")]
+    public ToggleNode PanelHighlight { get; set; } = new ToggleNode(true);
+
+    [Menu("Show mercenary overlay in the world")]
+    public ToggleNode WorldOverlay { get; set; } = new ToggleNode(true);
+
+    [Menu("Overlay font size")]
+    public RangeNode<int> OverlayFontSize { get; set; } = new RangeNode<int>(16, 8, 48);
+
+    [Menu("Overlay verdict line")]
+    public ToggleNode OverlayVerdict { get; set; } = new ToggleNode(true);
+
+    [Menu("Good colour")]
+    public ColorNode GoodColor { get; set; } = new ColorNode(Color.FromRgba(0xFF6EEB82));
+
+    [Menu("Neutral colour")]
+    public ColorNode NeutralColor { get; set; } = new ColorNode(Color.FromRgba(0xFFD8D8D8));
+
+    [Menu("Bricked colour")]
+    public ColorNode BrickedColor { get; set; } = new ColorNode(Color.FromRgba(0xFF5C5CE5));
+
+    public Dictionary<string, BuildRating> Ratings { get; set; } = new Dictionary<string, BuildRating>();
 }
