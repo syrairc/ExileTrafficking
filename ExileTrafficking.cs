@@ -1,34 +1,38 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using ExileCore;
 using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.MemoryObjects;
 using ImGuiNET;
 using Newtonsoft.Json;
+using RectangleF = SharpDX.RectangleF;
 using Vector2 = System.Numerics.Vector2;
 
 namespace ExileTrafficking;
 
-record MercSkill(string Name, IReadOnlyList<string> Supports);
+public record MercSupport(string Name, Element Icon);
 
-record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
+public record MercSkill(string Name, IReadOnlyList<MercSupport> Supports, Element Row);
+
+public record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
 
 public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 {
-    private static readonly Dictionary<string, string> Skills;
-    private static readonly Dictionary<string, string> Supports;
-    private static readonly Dictionary<string, string> Archetypes;
-
-    static ExileTrafficking()
+    // a throw in here blanks the whole settings page, so never let one escape
+    public override void DrawSettings()
     {
-        var tables = LoadTables() ?? new Dictionary<string, Dictionary<string, string>>();
-        Skills = tables.GetValueOrDefault("skills") ?? new();
-        Supports = tables.GetValueOrDefault("supports") ?? new();
-        Archetypes = tables.GetValueOrDefault("archetypes") ?? new();
+        base.DrawSettings();
+
+        try
+        {
+            RatingsUi.Draw(Settings);
+        }
+        catch (Exception e)
+        {
+            ImGui.TextUnformatted($"settings error: {e.Message}");
+        }
     }
 
     public override void Render()
@@ -38,12 +42,21 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             var ui = GameController.IngameState.IngameUi;
             Element window = ui.MercenaryEncounterWindow;
             if (window == null || !window.IsValid || !window.IsVisible) window = ui.MirageWishesPanel;
-            if (window == null || !window.IsValid || !window.IsVisible) return;
 
             // MirageWishesPanel shares its address with PopUpWindow and DestroyConfirmationWindow,
             // so the only reliable test is whether the thing actually holds a merc offer
-            var snapshot = Snapshot(window);
+            var open = window != null && window.IsValid && window.IsVisible;
+            var snapshot = open ? Snapshot(window) : null;
+
+            if (Settings.WorldOverlay)
+            {
+                WorldOverlay.Draw(GameController, Graphics, Settings,
+                    snapshot != null ? window.GetClientRect() : (RectangleF?)null);
+            }
+
             if (snapshot == null) return;
+
+            if (Settings.PanelHighlight) PanelHighlight.Draw(Graphics, snapshot, Settings);
 
             var rect = window.GetClientRect();
             var (anchorY, buttonHeight) = Anchor(window, rect.Bottom);
@@ -128,7 +141,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     {
         try
         {
-            var archetype = FindText(window, 12, Archetypes, true);
+            var archetype = FindText(window, 12, MercData.ArchetypeId, true);
             if (archetype == null) return null;
 
             var container = Descendants(window, 12, true).FirstOrDefault(x =>
@@ -136,17 +149,17 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 var children = x.Children;
                 if (children == null || children.Count < 2) return false;
 
-                return children.All(child => FindText(child, 3, Skills, true) != null);
+                return children.All(child => FindText(child, 3, MercData.SkillId, true) != null);
             });
             if (container == null) return null;
 
             var skills = new List<MercSkill>();
             foreach (var row in container.Children)
             {
-                var name = FindText(row, 3, Skills, true);
+                var name = FindText(row, 3, MercData.SkillId, true);
                 if (name == null) return null;
 
-                skills.Add(new MercSkill(name, ReadSupports(row)));
+                skills.Add(new MercSkill(name, ReadSupports(row), row));
             }
 
             if (skills.Count == 0) return null;
@@ -159,15 +172,14 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
-    private static List<string> ReadSupports(Element row) =>
+    private static List<MercSupport> ReadSupports(Element row) =>
         Descendants(row, 4)
-            .Select(x => new { Element = x, Name = FindText(x.Tooltip, 3, Supports) })
+            .Select(x => new MercSupport(FindText(x.Tooltip, 3, MercData.SupportId), x))
             .Where(x => x.Name != null)
-            .OrderBy(x => x.Element.GetClientRect().X)
-            .Select(x => x.Name)
+            .OrderBy(x => x.Icon.GetClientRect().X)
             .ToList();
 
-    private static string FindText(Element root, int depth, Dictionary<string, string> table, bool visibleOnly = false) =>
+    private static string FindText(Element root, int depth, Func<string, string> lookup, bool visibleOnly = false) =>
         Descendants(root, depth, visibleOnly)
             .Select(e =>
             {
@@ -175,7 +187,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 if (string.IsNullOrWhiteSpace(text)) text = e?.Text;
                 return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
             })
-            .FirstOrDefault(t => Lookup(table, t) != null);
+            .FirstOrDefault(t => lookup(t) != null);
 
     // visibleOnly matters on the panel itself: the popup container keeps every popup as a child and
     // only flips the local flag, so the merc offer is still sitting there while a confirm dialog is up.
@@ -199,7 +211,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
     private static string BuildQueryJson(MercSnapshot snapshot, int enabledSupports)
     {
-        var typeOption = Lookup(Archetypes, snapshot.Archetype);
+        var typeOption = MercData.ArchetypeId(snapshot.Archetype);
         if (typeOption == null) return null;
 
         var skillIds = new List<string>();
@@ -207,7 +219,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
         foreach (var skill in snapshot.Skills)
         {
-            var skillId = Lookup(Skills, skill.Name);
+            var skillId = MercData.SkillId(skill.Name);
             if (skillId == null) return null;
 
             skillIds.Add(skillId);
@@ -215,7 +227,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             var filters = new List<object>();
             foreach (var support in skill.Supports)
             {
-                var supportId = Lookup(Supports, support);
+                var supportId = MercData.SupportId(support.Name);
                 if (supportId == null) return null;
 
                 filters.Add(new { id = supportId, disabled = filters.Count >= enabledSupports });
@@ -239,22 +251,5 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             },
             sort = new { price = "asc" },
         });
-    }
-
-    private static string Lookup(Dictionary<string, string> table, string key) =>
-        !string.IsNullOrWhiteSpace(key) && table.TryGetValue(key.Trim(), out var value) ? value : null;
-
-    private static Dictionary<string, Dictionary<string, string>> LoadTables()
-    {
-        try
-        {
-            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ExileTrafficking.mercdata.json");
-            using var reader = new StreamReader(stream);
-            return JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(reader.ReadToEnd());
-        }
-        catch
-        {
-            return null;
-        }
     }
 }
