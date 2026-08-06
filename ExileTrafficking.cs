@@ -17,6 +17,21 @@ record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
 
 public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 {
+    // a throw in here blanks the whole settings page, so never let one escape
+    public override void DrawSettings()
+    {
+        base.DrawSettings();
+
+        try
+        {
+            RatingsUi.Draw(Settings);
+        }
+        catch (Exception e)
+        {
+            ImGui.TextUnformatted($"settings error: {e.Message}");
+        }
+    }
+
     public override void Render()
     {
         try
