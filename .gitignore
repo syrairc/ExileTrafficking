@@ -1,6 +1,7 @@
 bin/
 obj/
-tools/
+tools/*
+!tools/gen-mercdata.py
 .vs/
 *.user
 *.suo
