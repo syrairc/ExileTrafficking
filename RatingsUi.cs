@@ -42,11 +42,15 @@ public static class RatingsUi
         }
     }
 
+    // name stretches, the rating buttons sit in a pinned column so long names cannot run under them
+    private static readonly (string Name, float Width)[] Columns = { ("skill", 0f), ("rating", 78f) };
+
+    private const ImGuiTableFlags TableFlags = ImGuiTableFlags.RowBg | ImGuiTableFlags.NoBordersInBody;
+
     private static void DrawRatings(ExileTraffickingSettings settings)
     {
-        ImGui.SetNextItemWidth(260f);
+        ImGui.SetNextItemWidth(-1f);
         ImGui.InputTextWithHint("##et_search", "Search archetypes / skills / supports...", ref search, 64);
-        ImGui.SameLine();
         ImGui.Checkbox("Only show rated", ref onlyRated);
         ImGui.SameLine();
         ImGui.TextDisabled($"{MercData.BuildsByName.Count(b => b.Skills.Count > 0)} archetypes");
@@ -66,14 +70,18 @@ public static class RatingsUi
             if (!ImGui.CollapsingHeader(label)) continue;
 
             ImGui.PushID(build.Id);
-            ImGui.Indent();
             if (rated > 0 && ImGui.SmallButton("Export this archetype"))
             {
                 ImGui.SetClipboardText(ShareCode.Encode(settings.Ratings, build.Id));
             }
 
-            foreach (var skill in skills) DrawSkill(settings, build, skill);
-            ImGui.Unindent();
+            if (Tables.Begin("##skills", Columns, showHeader: false, flags: TableFlags))
+            {
+                var row = 0;
+                foreach (var skill in skills) DrawSkill(settings, build, skill, ref row);
+                Tables.End();
+            }
+
             ImGui.PopID();
         }
     }
@@ -101,44 +109,52 @@ public static class RatingsUi
     private static bool BuildMatches(MercBuild build) =>
         Matches(build.Name) || build.Infamous.Any(Matches);
 
-    private static void DrawSkill(ExileTraffickingSettings settings, MercBuild build, string skill)
+    // one table row per skill, its supports as further rows while the node is open. the tree node's
+    // own indent is what nests them, so supports must be drawn before TreePop
+    private static void DrawSkill(ExileTraffickingSettings settings, MercBuild build, string skill, ref int row)
     {
         var supports = build.Skills[skill];
         var rating = Ratings.Skill(settings.Ratings, build.Id, skill);
+        bool open;
 
-        ImGui.PushID(skill);
-        var open = ImGui.TreeNodeEx($"{skill}##node",
-            supports.Count == 0 ? ImGuiTreeNodeFlags.Leaf : ImGuiTreeNodeFlags.None);
-        ImGui.SameLine();
-        if (Controls.Segmented($"##skill_{skill}", ref rating, Options))
+        using (Tables.Row(row++))
         {
-            Ratings.SetSkill(settings.Ratings, build.Id, skill, rating);
+            ImGui.TableNextColumn();
+            open = ImGui.TreeNodeEx($"{skill}##node", supports.Count == 0
+                ? ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.SpanFullWidth
+                : ImGuiTreeNodeFlags.SpanFullWidth);
+
+            ImGui.TableNextColumn();
+            if (Controls.Segmented("##skill", ref rating, Options))
+            {
+                Ratings.SetSkill(settings.Ratings, build.Id, skill, rating);
+            }
         }
 
-        if (open)
+        if (!open) return;
+
+        foreach (var support in supports)
         {
-            foreach (var support in supports)
+            if (!Matches(support) && !Matches(skill) && !BuildMatches(build)) continue;
+
+            var value = Ratings.Support(settings.Ratings, build.Id, skill, support);
+            if (onlyRated && value == Rating.Neutral) continue;
+
+            using (Tables.Row(row++))
             {
-                if (!Matches(support) && !Matches(skill) && !BuildMatches(build)) continue;
+                ImGui.TableNextColumn();
+                ImGui.TreeNodeEx(support, ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen |
+                                          ImGuiTreeNodeFlags.SpanFullWidth);
 
-                var value = Ratings.Support(settings.Ratings, build.Id, skill, support);
-                if (onlyRated && value == Rating.Neutral) continue;
-
-                ImGui.PushID(support);
-                ImGui.TextUnformatted(support);
-                ImGui.SameLine(240f);
+                ImGui.TableNextColumn();
                 if (Controls.Segmented("##support", ref value, Options))
                 {
                     Ratings.SetSupport(settings.Ratings, build.Id, skill, support, value);
                 }
-
-                ImGui.PopID();
             }
-
-            ImGui.TreePop();
         }
 
-        ImGui.PopID();
+        ImGui.TreePop();
     }
 
     private static void DrawShare(ExileTraffickingSettings settings)
