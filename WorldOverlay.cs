@@ -48,6 +48,11 @@ public static class WorldOverlay
     {
         var window = game.Window.GetWindowRectangleTimeCache;
 
+        // 16 is the default overlay font size, treat it as scale 1.0
+        var scale = settings.OverlayFontSize.Value / 16f;
+        using var _ = graphics.SetTextScale(scale);
+        var lineHeight = graphics.MeasureText("X").Y;
+
         foreach (var entity in game.EntityListWrapper.OnlyValidEntities)
         {
             if (!IsHireable(entity)) continue;
@@ -63,24 +68,23 @@ public static class WorldOverlay
             var origin = game.IngameState.Camera.WorldToScreen(head);
             if (origin.X < 0 || origin.Y < 0 || origin.X > window.Width || origin.Y > window.Height) continue;
 
-            var size = settings.OverlayFontSize.Value;
-            var y = origin.Y - (skills.Count + 2) * size;
+            var y = origin.Y - (skills.Count + 2) * lineHeight;
 
             var header = build == null
                 ? $"Unknown  lvl {MercData.Level(entity.Path)}"
                 : $"{build.Name}  lvl {MercData.Level(entity.Path)}";
-            y = Line(graphics, header, new Vector2(origin.X, y), settings.NeutralColor.Value, size);
+            y = Line(graphics, header, new Vector2(origin.X, y), settings.NeutralColor.Value);
 
             foreach (var skill in skills)
             {
                 var rating = Ratings.Skill(settings.Ratings, buildId, skill);
-                y = Line(graphics, skill, new Vector2(origin.X, y), Colour(rating, settings), size);
+                y = Line(graphics, skill, new Vector2(origin.X, y), Colour(rating, settings));
             }
 
             if (!settings.OverlayVerdict) continue;
 
             var verdict = Ratings.Verdict(settings.Ratings, buildId, skills);
-            Line(graphics, Word(verdict), new Vector2(origin.X, y), Colour(verdict, settings), size);
+            Line(graphics, Word(verdict), new Vector2(origin.X, y), Colour(verdict, settings));
         }
     }
 
@@ -99,17 +103,14 @@ public static class WorldOverlay
     };
 
     // no stroked text in ExileCore, so lay black down eight ways first
-    // sized DrawText is marked obsolete in this ExileCore build but is still the only way to size text
-#pragma warning disable CS0618
-    private static float Line(Graphics graphics, string text, Vector2 position, Color color, int size)
+    private static float Line(Graphics graphics, string text, Vector2 position, Color color)
     {
         foreach (var offset in StrokeOffsets)
         {
-            graphics.DrawText(text, position + offset, Color.Black, size, FontAlign.Center);
+            graphics.DrawText(text, position + offset, Color.Black, FontAlign.Center);
         }
 
-        var drawn = graphics.DrawText(text, position, color, size, FontAlign.Center);
+        var drawn = graphics.DrawText(text, position, color, FontAlign.Center);
         return position.Y + drawn.Y;
     }
-#pragma warning restore CS0618
 }
