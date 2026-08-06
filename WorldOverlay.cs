@@ -58,31 +58,35 @@ public static class WorldOverlay
             var skills = SkillNames(entity);
             if (skills.Count == 0) continue;
 
-            var build = MercData.Infer(skills, entity.Path);
+            var build = MercData.Infer(skills, entity.Path, out var certain);
             var buildId = build?.Id;
+            var lines = skills.Count + 1 + (settings.OverlayVerdict ? 1 : 0);
 
             var head = entity.PosNum;
             head.Z -= entity.GetComponent<Render>()?.BoundsNum.Z ?? 0f;
             var origin = game.IngameState.Camera.WorldToScreen(head);
-            if (origin.X < 0 || origin.Y < 0 || origin.X > window.Width || origin.Y > window.Height) continue;
+            var top = origin.Y - lines * lineHeight;
+            if (origin.X < 0 || origin.X > window.Width || origin.Y < 0 || top > window.Height) continue;
 
-            var y = origin.Y - (skills.Count + 2) * lineHeight;
+            var y = top;
 
             var header = build == null
                 ? $"Unknown  lvl {MercData.Level(entity.Path)}"
-                : $"{build.Name}  lvl {MercData.Level(entity.Path)}";
+                : $"{build.Name}{(certain ? "" : "?")}  lvl {MercData.Level(entity.Path)}";
             y = Line(graphics, header, new Vector2(origin.X, y), settings.NeutralColor.Value);
 
             foreach (var skill in skills)
             {
                 var rating = Ratings.Skill(settings.Ratings, buildId, skill);
-                y = Line(graphics, skill, new Vector2(origin.X, y), Colour(rating, settings));
+                var color = Ratings.Colour(rating, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
+                y = Line(graphics, skill, new Vector2(origin.X, y), color);
             }
 
             if (!settings.OverlayVerdict) continue;
 
             var verdict = Ratings.Verdict(settings.Ratings, buildId, skills);
-            Line(graphics, Word(verdict), new Vector2(origin.X, y), Colour(verdict, settings));
+            var verdictColor = Ratings.Colour(verdict, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
+            Line(graphics, Word(verdict), new Vector2(origin.X, y), verdictColor);
         }
     }
 
@@ -91,13 +95,6 @@ public static class WorldOverlay
         Rating.Good => "GOOD",
         Rating.Bricked => "BRICKED",
         _ => "NEUTRAL",
-    };
-
-    private static Color Colour(Rating rating, ExileTraffickingSettings settings) => rating switch
-    {
-        Rating.Good => settings.GoodColor.Value,
-        Rating.Bricked => settings.BrickedColor.Value,
-        _ => settings.NeutralColor.Value,
     };
 
     // no stroked text in ExileCore, so lay black down eight ways first
