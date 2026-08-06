@@ -28,14 +28,12 @@ public static class RatingsUi
         {
             if (ImGui.BeginTabItem("Ratings"))
             {
-                DrawRatings(settings);
-                ImGui.EndTabItem();
+                try { DrawRatings(settings); } finally { ImGui.EndTabItem(); }
             }
 
             if (ImGui.BeginTabItem("Import / Export"))
             {
-                DrawShare(settings);
-                ImGui.EndTabItem();
+                try { DrawShare(settings); } finally { ImGui.EndTabItem(); }
             }
         }
         finally
@@ -69,7 +67,7 @@ public static class RatingsUi
 
             ImGui.PushID(build.Id);
             ImGui.Indent();
-            if (ImGui.SmallButton("Export this archetype"))
+            if (rated > 0 && ImGui.SmallButton("Export this archetype"))
             {
                 ImGui.SetClipboardText(ShareCode.Encode(settings.Ratings, build.Id));
             }
@@ -101,7 +99,7 @@ public static class RatingsUi
         string.IsNullOrWhiteSpace(search) || Text.Matches(search, text ?? "");
 
     private static bool BuildMatches(MercBuild build) =>
-        Matches(build.Name) || Matches(build.Infamous);
+        Matches(build.Name) || build.Infamous.Any(Matches);
 
     private static void DrawSkill(ExileTraffickingSettings settings, MercBuild build, string skill)
     {
@@ -145,7 +143,7 @@ public static class RatingsUi
 
     private static void DrawShare(ExileTraffickingSettings settings)
     {
-        ImGui.TextDisabled($"{settings.Ratings.Count} archetypes, {ShareCode.RatingCount(settings.Ratings)} ratings");
+        ImGui.TextDisabled($"{settings.Ratings?.Count ?? 0} archetypes, {ShareCode.RatingCount(settings.Ratings)} ratings");
 
         if (ImGui.Button("Copy everything to clipboard"))
         {
