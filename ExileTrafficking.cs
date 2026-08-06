@@ -38,6 +38,8 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     {
         try
         {
+            if (Settings.WorldOverlay) WorldOverlay.Draw(GameController, Graphics, Settings);
+
             var ui = GameController.IngameState.IngameUi;
             Element window = ui.MercenaryEncounterWindow;
             if (window == null || !window.IsValid || !window.IsVisible) window = ui.MirageWishesPanel;
