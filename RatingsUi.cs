@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using ExileImGui;
 using ImGuiNET;
 
@@ -84,7 +82,7 @@ public static class RatingsUi
 
     private static IEnumerable<string> Visible(MercBuild build, ExileTraffickingSettings settings)
     {
-        var buildMatches = Matches(build.Name) || Matches(build.Infamous);
+        var buildMatches = BuildMatches(build);
 
         foreach (var (skill, supports) in build.Skills)
         {
@@ -101,6 +99,9 @@ public static class RatingsUi
 
     private static bool Matches(string text) =>
         string.IsNullOrWhiteSpace(search) || Text.Matches(search, text ?? "");
+
+    private static bool BuildMatches(MercBuild build) =>
+        Matches(build.Name) || Matches(build.Infamous);
 
     private static void DrawSkill(ExileTraffickingSettings settings, MercBuild build, string skill)
     {
@@ -120,7 +121,7 @@ public static class RatingsUi
         {
             foreach (var support in supports)
             {
-                if (!Matches(support) && !Matches(skill) && !Matches(build.Name)) continue;
+                if (!Matches(support) && !Matches(skill) && !BuildMatches(build)) continue;
 
                 var value = Ratings.Support(settings.Ratings, build.Id, skill, support);
                 if (onlyRated && value == Rating.Neutral) continue;
