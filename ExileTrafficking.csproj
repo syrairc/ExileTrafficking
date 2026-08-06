@@ -35,10 +35,4 @@
     <EmbeddedResource Include="mercdata.json" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- tests/ has its own csproj, keep its files out of this project's globs -->
-    <Compile Remove="tests\**" />
-    <EmbeddedResource Remove="tests\**" />
-    <None Remove="tests\**" />
-  </ItemGroup>
 </Project>
