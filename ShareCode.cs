@@ -12,6 +12,9 @@ public static class ShareCode
 {
     public const string Prefix = "ET1:";
 
+    // way above a full 36-archetype table, just here to stop a crafted string inflating unbounded
+    private const int MaxDecodedBytes = 256 * 1024;
+
     // wire shape: {"v":1,"b":{buildId:{skill:[rating,{support:rating}]}}}
     private class Payload
     {
@@ -65,22 +68,30 @@ public static class ShareCode
 
             using var input = new MemoryStream(Convert.FromBase64String(body));
             using var deflate = new DeflateStream(input, CompressionMode.Decompress);
-            using var reader = new StreamReader(deflate, Encoding.UTF8);
-            var payload = JsonConvert.DeserializeObject<Payload>(reader.ReadToEnd());
-            if (payload?.Builds == null) return null;
+            using var output = new MemoryStream();
+            var buffer = new byte[8192];
+            int read;
+            while ((read = deflate.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                if (output.Length + read > MaxDecodedBytes) return null;
+                output.Write(buffer, 0, read);
+            }
+
+            var payload = JsonConvert.DeserializeObject<Payload>(Encoding.UTF8.GetString(output.ToArray()));
+            if (payload?.Builds == null || payload.Version != 1) return null;
 
             var store = new Dictionary<string, BuildRating>();
             foreach (var (id, skills) in payload.Builds)
             {
                 foreach (var (skill, pair) in skills)
                 {
-                    Ratings.SetSkill(store, id, skill, (Rating)Convert.ToInt32(pair[0]));
+                    Ratings.SetSkill(store, id, skill, ClampRating(Convert.ToInt32(pair[0])));
 
                     var supports = JsonConvert.DeserializeObject<Dictionary<string, int>>(
                         JsonConvert.SerializeObject(pair[1]));
                     foreach (var (support, rating) in supports ?? new Dictionary<string, int>())
                     {
-                        Ratings.SetSupport(store, id, skill, support, (Rating)rating);
+                        Ratings.SetSupport(store, id, skill, support, ClampRating(rating));
                     }
                 }
             }
@@ -92,6 +103,10 @@ public static class ShareCode
             return null;
         }
     }
+
+    // anything outside the enum's real range settles on neutral rather than persisting garbage
+    private static Rating ClampRating(int value) =>
+        value == (int)Rating.Good ? Rating.Good : value == (int)Rating.Bricked ? Rating.Bricked : Rating.Neutral;
 
     public static void Apply(Dictionary<string, BuildRating> store,
         Dictionary<string, BuildRating> incoming, bool replace)
