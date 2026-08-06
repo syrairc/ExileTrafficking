@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using SharpDX;
 
 namespace ExileTrafficking;
 
@@ -57,6 +58,13 @@ public static class Ratings
         store != null && store.TryGetValue(buildId ?? "", out var build)
             ? build.Skills.Values.Sum(x => (x.Rating == Rating.Neutral ? 0 : 1) + x.Supports.Count)
             : 0;
+
+    public static Color Colour(Rating rating, Color good, Color neutral, Color bricked) => rating switch
+    {
+        Rating.Good => good,
+        Rating.Bricked => bricked,
+        _ => neutral,
+    };
 
     public static Rating Verdict(Dictionary<string, BuildRating> store, string buildId, IEnumerable<string> skills)
     {

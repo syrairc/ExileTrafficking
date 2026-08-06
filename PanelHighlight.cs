@@ -28,7 +28,7 @@ public static class PanelHighlight
     {
         if (rating == Rating.Neutral || element == null || !element.IsValid) return;
 
-        var color = rating == Rating.Good ? settings.GoodColor.Value : settings.BrickedColor.Value;
+        var color = Ratings.Colour(rating, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
         graphics.DrawFrame(element.GetClientRect(), color, 2);
     }
 }
