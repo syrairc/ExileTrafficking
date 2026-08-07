@@ -79,8 +79,11 @@ public static class WorldOverlay
                 Add(graphics, Word(verdict), Colour(verdict, settings));
             }
 
-            var head = entity.PosNum;
-            head.Z -= entity.GetComponent<Render>()?.BoundsNum.Z ?? 0f;
+            // Entity.Pos is the bounding box corner, so it sits half a box north east of the model and
+            // the projection turns that into a sideways slide as the camera moves. centre first, then
+            // rise half a box to the top of the head
+            var head = entity.BoundsCenterPosNum;
+            head.Z -= (entity.GetComponent<Render>()?.BoundsNum.Z ?? 0f) / 2f;
             var origin = game.IngameState.Camera.WorldToScreen(head);
             origin.X += settings.OverlayOffsetX.Value;
             origin.Y += settings.OverlayOffsetY.Value;
