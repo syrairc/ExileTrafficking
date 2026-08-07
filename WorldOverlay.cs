@@ -51,7 +51,6 @@ public static class WorldOverlay
         // 16 is the default overlay font size, treat it as scale 1.0
         var scale = settings.OverlayFontSize.Value / 16f;
         using var _ = graphics.SetTextScale(scale);
-        var lineHeight = graphics.MeasureText("X").Y;
 
         foreach (var entity in game.EntityListWrapper.OnlyValidEntities)
         {
@@ -62,7 +61,23 @@ public static class WorldOverlay
 
             var build = MercData.Infer(skills, entity.Path, out var certain);
             var buildId = build?.Id;
-            var lines = skills.Count + 1 + (settings.OverlayVerdict ? 1 : 0);
+
+            Block.Clear();
+            Add(graphics, build == null
+                ? $"UNKNOWN  LVL {MercData.Level(entity.Path)}"
+                : $"{build.Name.ToUpperInvariant()}{(certain ? "" : "?")}  LVL {MercData.Level(entity.Path)}",
+                settings.HeaderColor.Value);
+
+            foreach (var skill in skills)
+            {
+                Add(graphics, skill, Colour(Ratings.Skill(settings.Ratings, buildId, skill), settings));
+            }
+
+            if (settings.OverlayVerdict)
+            {
+                var verdict = Ratings.Verdict(settings.Ratings, buildId, skills);
+                Add(graphics, Word(verdict), Colour(verdict, settings));
+            }
 
             var head = entity.PosNum;
             head.Z -= entity.GetComponent<Render>()?.BoundsNum.Z ?? 0f;
@@ -70,44 +85,41 @@ public static class WorldOverlay
             origin.X += settings.OverlayOffsetX.Value;
             origin.Y += settings.OverlayOffsetY.Value;
 
-            // origin is the block's bottom, so the whole thing stacks up from the mercenary's head
-            var height = lines * lineHeight;
+            // measured, not lines * a nominal height: the block is laid out with the same numbers it
+            // reserves, so its bottom line stays a fixed gap above the head whatever the skill count
+            float height = 0f, width = 0f;
+            foreach (var (_, _, size) in Block)
+            {
+                height += size.Y;
+                width = Math.Max(width, size.X);
+            }
+
             var top = origin.Y - height;
             if (origin.X < 0 || origin.X > window.Width || origin.Y < 0 || top > window.Height) continue;
 
-            var header = build == null
-                ? $"UNKNOWN  LVL {MercData.Level(entity.Path)}"
-                : $"{build.Name.ToUpperInvariant()}{(certain ? "" : "?")}  LVL {MercData.Level(entity.Path)}";
-
-            if (panel is { } rect && Overlaps(graphics, rect, header, skills, origin.X, top, height)) continue;
-
-            var y = Line(graphics, header, new Vector2(origin.X, top), settings.HeaderColor.Value);
-
-            foreach (var skill in skills)
+            if (panel is { } rect &&
+                new RectangleF(origin.X - width / 2f, top, width, height).Intersects(rect))
             {
-                var rating = Ratings.Skill(settings.Ratings, buildId, skill);
-                var color = Ratings.Colour(rating, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
-                y = Line(graphics, skill, new Vector2(origin.X, y), color);
+                continue;
             }
 
-            if (!settings.OverlayVerdict) continue;
-
-            var verdict = Ratings.Verdict(settings.Ratings, buildId, skills);
-            var verdictColor = Ratings.Colour(verdict, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
-            Line(graphics, Word(verdict), new Vector2(origin.X, y), verdictColor);
+            var y = top;
+            foreach (var (text, color, size) in Block)
+            {
+                Line(graphics, text, new Vector2(origin.X, y), color);
+                y += size.Y;
+            }
         }
     }
 
     // text is centre aligned on x, so the block is as wide as its widest line
-    private static bool Overlaps(Graphics graphics, RectangleF panel, string header, List<string> skills,
-        float centerX, float top, float height)
-    {
-        var width = graphics.MeasureText(header).X;
-        foreach (var skill in skills) width = Math.Max(width, graphics.MeasureText(skill).X);
+    private static readonly List<(string Text, Color Color, Vector2 Size)> Block = new();
 
-        var block = new RectangleF(centerX - width / 2f, top, width, height);
-        return block.Intersects(panel);
-    }
+    private static void Add(Graphics graphics, string text, Color color) =>
+        Block.Add((text, color, graphics.MeasureText(text)));
+
+    private static Color Colour(Rating rating, ExileTraffickingSettings settings) =>
+        Ratings.Colour(rating, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
 
     private static string Word(Rating rating) => rating switch
     {
@@ -117,14 +129,13 @@ public static class WorldOverlay
     };
 
     // no stroked text in ExileCore, so lay black down eight ways first
-    private static float Line(Graphics graphics, string text, Vector2 position, Color color)
+    private static void Line(Graphics graphics, string text, Vector2 position, Color color)
     {
         foreach (var offset in StrokeOffsets)
         {
             graphics.DrawText(text, position + offset, Color.Black, FontAlign.Center);
         }
 
-        var drawn = graphics.DrawText(text, position, color, FontAlign.Center);
-        return position.Y + drawn.Y;
+        graphics.DrawText(text, position, color, FontAlign.Center);
     }
 }
