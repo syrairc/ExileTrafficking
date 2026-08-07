@@ -22,8 +22,9 @@ public static class WorldOverlay
         new(-1, 1), new(0, 1), new(1, 1),
     };
 
+    // a mercenary you have turned on is no longer an offer, so it drops off the overlay
     public static bool IsHireable(Entity entity) =>
-        entity != null && entity.IsValid &&
+        entity != null && entity.IsValid && !entity.IsHostile &&
         entity.Path != null && entity.Path.Contains("/Mercenaries/") && !entity.Path.Contains("Allied") &&
         entity.TryGetComponent<MinimapIcon>(out var icon) && icon?.Name == "MercenaryEncounter";
 
