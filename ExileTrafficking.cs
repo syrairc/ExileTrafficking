@@ -7,6 +7,7 @@ using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.MemoryObjects;
 using ImGuiNET;
 using Newtonsoft.Json;
+using RectangleF = SharpDX.RectangleF;
 using Vector2 = System.Numerics.Vector2;
 
 namespace ExileTrafficking;
@@ -38,16 +39,21 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     {
         try
         {
-            if (Settings.WorldOverlay) WorldOverlay.Draw(GameController, Graphics, Settings);
-
             var ui = GameController.IngameState.IngameUi;
             Element window = ui.MercenaryEncounterWindow;
             if (window == null || !window.IsValid || !window.IsVisible) window = ui.MirageWishesPanel;
-            if (window == null || !window.IsValid || !window.IsVisible) return;
 
             // MirageWishesPanel shares its address with PopUpWindow and DestroyConfirmationWindow,
             // so the only reliable test is whether the thing actually holds a merc offer
-            var snapshot = Snapshot(window);
+            var open = window != null && window.IsValid && window.IsVisible;
+            var snapshot = open ? Snapshot(window) : null;
+
+            if (Settings.WorldOverlay)
+            {
+                WorldOverlay.Draw(GameController, Graphics, Settings,
+                    snapshot != null ? window.GetClientRect() : (RectangleF?)null);
+            }
+
             if (snapshot == null) return;
 
             if (Settings.PanelHighlight) PanelHighlight.Draw(Graphics, snapshot, Settings);

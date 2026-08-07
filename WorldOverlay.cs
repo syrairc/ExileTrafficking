@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using ExileCore;
@@ -42,7 +43,8 @@ public static class WorldOverlay
         return names;
     }
 
-    public static void Draw(GameController game, Graphics graphics, ExileTraffickingSettings settings)
+    public static void Draw(GameController game, Graphics graphics, ExileTraffickingSettings settings,
+        RectangleF? panel = null)
     {
         var window = game.Window.GetWindowRectangleTimeCache;
 
@@ -65,15 +67,21 @@ public static class WorldOverlay
             var head = entity.PosNum;
             head.Z -= entity.GetComponent<Render>()?.BoundsNum.Z ?? 0f;
             var origin = game.IngameState.Camera.WorldToScreen(head);
-            var top = origin.Y - lines * lineHeight;
+            origin.X += settings.OverlayOffsetX.Value;
+            origin.Y += settings.OverlayOffsetY.Value;
+
+            // origin is the block's bottom, so the whole thing stacks up from the mercenary's head
+            var height = lines * lineHeight;
+            var top = origin.Y - height;
             if (origin.X < 0 || origin.X > window.Width || origin.Y < 0 || top > window.Height) continue;
 
-            var y = top;
-
             var header = build == null
-                ? $"Unknown  lvl {MercData.Level(entity.Path)}"
-                : $"{build.Name}{(certain ? "" : "?")}  lvl {MercData.Level(entity.Path)}";
-            y = Line(graphics, header, new Vector2(origin.X, y), settings.NeutralColor.Value);
+                ? $"UNKNOWN  LVL {MercData.Level(entity.Path)}"
+                : $"{build.Name.ToUpperInvariant()}{(certain ? "" : "?")}  LVL {MercData.Level(entity.Path)}";
+
+            if (panel is { } rect && Overlaps(graphics, rect, header, skills, origin.X, top, height)) continue;
+
+            var y = Line(graphics, header, new Vector2(origin.X, top), settings.HeaderColor.Value);
 
             foreach (var skill in skills)
             {
@@ -88,6 +96,17 @@ public static class WorldOverlay
             var verdictColor = Ratings.Colour(verdict, settings.GoodColor.Value, settings.NeutralColor.Value, settings.BrickedColor.Value);
             Line(graphics, Word(verdict), new Vector2(origin.X, y), verdictColor);
         }
+    }
+
+    // text is centre aligned on x, so the block is as wide as its widest line
+    private static bool Overlaps(Graphics graphics, RectangleF panel, string header, List<string> skills,
+        float centerX, float top, float height)
+    {
+        var width = graphics.MeasureText(header).X;
+        foreach (var skill in skills) width = Math.Max(width, graphics.MeasureText(skill).X);
+
+        var block = new RectangleF(centerX - width / 2f, top, width, height);
+        return block.Intersects(panel);
     }
 
     private static string Word(Rating rating) => rating switch

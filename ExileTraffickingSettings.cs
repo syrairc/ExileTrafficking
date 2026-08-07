@@ -34,6 +34,15 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Overlay verdict line")]
     public ToggleNode OverlayVerdict { get; set; } = new ToggleNode(true);
 
+    [Menu("Overlay X offset", "Nudge from the mercenary's head.")]
+    public RangeNode<int> OverlayOffsetX { get; set; } = new RangeNode<int>(0, -1000, 1000);
+
+    [Menu("Overlay Y offset", "Nudge from the mercenary's head. Negative moves the block up.")]
+    public RangeNode<int> OverlayOffsetY { get; set; } = new RangeNode<int>(-40, -1000, 1000);
+
+    [Menu("Archetype line colour")]
+    public ColorNode HeaderColor { get; set; } = new ColorNode(Color.FromRgba(0xFF37D7FF));
+
     [Menu("Good colour")]
     public ColorNode GoodColor { get; set; } = new ColorNode(Color.FromRgba(0xFF6EEB82));
 
