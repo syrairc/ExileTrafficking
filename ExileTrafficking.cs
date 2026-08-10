@@ -20,14 +20,13 @@ public record MercSnapshot(string Archetype, IReadOnlyList<MercSkill> Skills);
 
 public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 {
-    // a throw in here blanks the whole settings page, so never let one escape
+    // a throw in here blanks the whole settings page, so never let one escape. base.DrawSettings is
+    // handed over as the General tab's body rather than drawn above the bar
     public override void DrawSettings()
     {
-        base.DrawSettings();
-
         try
         {
-            RatingsUi.Draw(Settings);
+            SettingsUi.Draw(Settings, base.DrawSettings);
         }
         catch (Exception e)
         {
@@ -52,6 +51,20 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             {
                 WorldOverlay.Draw(GameController, Graphics, Settings,
                     snapshot != null ? window.GetClientRect() : (RectangleF?)null);
+            }
+
+            var warrant = WarrantTooltip.Hovered(GameController);
+            if (warrant != null)
+            {
+                if (Settings.WarrantTooltip)
+                {
+                    WarrantTooltip.Draw(Graphics, Settings, warrant,
+                        GameController.Window.GetWindowRectangleTimeCache);
+                }
+
+                // only listens while you're actually on a warrant, so a plain letter key is fine
+                if (Settings.WarrantSearchKey.PressedOnce()) Open(FromMemory(warrant.Merc,
+                    Settings.EnabledSupports.Value, Settings.SearchRated ? Settings.Ratings : null));
             }
 
             if (snapshot == null) return;
@@ -121,6 +134,20 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
     private void Search(MercSnapshot snapshot)
     {
+        var ratings = Settings.SearchRated ? Settings.Ratings : null;
+
+        var json = Settings.PreferMemory
+            ? FromMemory(MercenaryMemory.Encounter(GameController), Settings.EnabledSupports.Value, ratings)
+            : null;
+        json ??= BuildQueryJson(snapshot, Settings.EnabledSupports.Value, ratings);
+
+        Open(json);
+    }
+
+    private void Open(string json)
+    {
+        if (json == null) return;
+
         var league = Settings.LeagueOverride.Value;
         if (string.IsNullOrWhiteSpace(league))
         {
@@ -128,9 +155,6 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
 
         if (string.IsNullOrWhiteSpace(league)) return;
-
-        var json = BuildQueryJson(snapshot, Settings.EnabledSupports.Value);
-        if (json == null) return;
 
         var url = $"https://www.pathofexile.com/trade/search/{Uri.EscapeDataString(league.Trim())}" +
                   $"?q={Uri.EscapeDataString(json)}";
@@ -209,37 +233,92 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
-    private static string BuildQueryJson(MercSnapshot snapshot, int enabledSupports)
+    private static string BuildQueryJson(MercSnapshot snapshot, int enabledSupports,
+        Dictionary<string, BuildRating> ratings)
     {
         var typeOption = MercData.ArchetypeId(snapshot.Archetype);
         if (typeOption == null) return null;
 
-        var skillIds = new List<string>();
-        var linkedGroups = new List<object>();
-
+        var skills = new List<(string, IReadOnlyList<string>)>();
         foreach (var skill in snapshot.Skills)
         {
             var skillId = MercData.SkillId(skill.Name);
             if (skillId == null) return null;
 
-            skillIds.Add(skillId);
-
-            var filters = new List<object>();
+            var supports = new List<string>();
             foreach (var support in skill.Supports)
             {
                 var supportId = MercData.SupportId(support.Name);
                 if (supportId == null) return null;
 
-                filters.Add(new { id = supportId, disabled = filters.Count >= enabledSupports });
+                supports.Add(supportId);
             }
 
-            if (filters.Count == 0) continue;
+            skills.Add((skillId, supports));
+        }
 
-            filters.Insert(0, new { id = skillId, disabled = false });
+        return QueryJson(typeOption, skills, enabledSupports, ratings,
+            MercData.BuildForArchetype(snapshot.Archetype)?.Id);
+    }
+
+    // the handler descriptor already carries trade ids, so this path never touches panel text
+    private static string FromMemory(MemMerc merc, int enabledSupports, Dictionary<string, BuildRating> ratings)
+    {
+        var build = merc?.Build;
+        if (build == null || merc.Skills.Count == 0) return null;
+
+        // must come off the hash, not the build: an infamous mercenary folds to the same build but is
+        // a separate warrant on trade
+        var typeOption = MercData.TypeOptionForHash(merc.BuildHash);
+        if (typeOption == null) return null;
+
+        var skills = merc.Skills
+            .Select(x => (x.TradeId, (IReadOnlyList<string>)x.SupportTradeIds.ToList()))
+            .ToList();
+
+        return QueryJson(typeOption, skills, enabledSupports, ratings, build.Id);
+    }
+
+    public static string QueryJson(string typeOption,
+        IReadOnlyList<(string Skill, IReadOnlyList<string> Supports)> skills, int enabledSupports,
+        Dictionary<string, BuildRating> ratings = null, string buildId = null)
+    {
+        // a support rated good pulls its skill along, on its own it would match nothing
+        bool Wanted(string skillId, IReadOnlyList<string> supportIds)
+        {
+            var skillName = MercData.SkillName(skillId);
+            return Ratings.Skill(ratings, buildId, skillName) == Rating.Good ||
+                   supportIds.Any(x =>
+                       Ratings.Support(ratings, buildId, skillName, MercData.SupportName(x)) == Rating.Good);
+        }
+
+        // nothing rated good would leave every filter off, so fall back to the positional count
+        var rated = ratings != null && buildId != null && skills.Any(x => Wanted(x.Skill, x.Supports));
+
+        var linkedGroups = new List<object>();
+        var skillFilters = new List<object>();
+
+        foreach (var (skillId, supportIds) in skills)
+        {
+            var skillOn = !rated || Wanted(skillId, supportIds);
+            skillFilters.Add(new { id = skillId, disabled = !skillOn });
+
+            if (supportIds.Count == 0) continue;
+
+            var skillName = rated ? MercData.SkillName(skillId) : null;
+            var filters = new List<object> { new { id = skillId, disabled = !skillOn } };
+            for (var i = 0; i < supportIds.Count; i++)
+            {
+                var on = rated
+                    ? Ratings.Support(ratings, buildId, skillName, MercData.SupportName(supportIds[i])) == Rating.Good
+                    : i < enabledSupports;
+                filters.Add(new { id = supportIds[i], disabled = !on });
+            }
+
             linkedGroups.Add(new { type = "mercenary", filters });
         }
 
-        linkedGroups.Insert(0, new { type = "and", filters = skillIds.Select(x => new { id = x }).ToList() });
+        linkedGroups.Insert(0, new { type = "and", filters = skillFilters });
 
         return JsonConvert.SerializeObject(new
         {

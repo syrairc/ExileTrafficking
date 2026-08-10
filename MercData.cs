@@ -20,10 +20,14 @@ public static class MercData
 {
     private static readonly Dictionary<string, string> SkillIds;
     private static readonly Dictionary<string, string> SupportIds;
+    private static readonly Dictionary<string, string> SkillNamesById;
+    private static readonly Dictionary<string, string> SupportNamesById;
     private static readonly Dictionary<string, string> ArchetypeIds;
     private static readonly Dictionary<string, string> Effects;
     private static readonly Dictionary<string, MercBuild> BuildsById;
     private static readonly Dictionary<string, MercBuild> BuildsByArchetype;
+    private static readonly Dictionary<ushort, MercBuild> BuildsByHash;
+    private static readonly Dictionary<ushort, string> TypeOptionsByHash;
 
     public static IReadOnlyDictionary<string, MercBuild> Builds => BuildsById;
     public static IReadOnlyList<MercBuild> BuildsByName { get; }
@@ -34,6 +38,8 @@ public static class MercData
         var root = Load() ?? new JObject();
         SkillIds = Strings(root, "skills");
         SupportIds = Strings(root, "supports");
+        SkillNamesById = Reverse(SkillIds);
+        SupportNamesById = Reverse(SupportIds);
         ArchetypeIds = Strings(root, "archetypes");
         Effects = Strings(root, "grantedEffects");
         BuildsById = ReadBuilds(root);
@@ -45,12 +51,37 @@ public static class MercData
             BuildsByArchetype[build.Name] = build;
             foreach (var alias in build.Infamous) BuildsByArchetype[alias] = build;
         }
+
+        BuildsByHash = new Dictionary<ushort, MercBuild>();
+        foreach (var (hash, id) in Strings(root, "buildHashes"))
+        {
+            if (ushort.TryParse(hash, out var key) && BuildsById.TryGetValue(id, out var build))
+            {
+                BuildsByHash[key] = build;
+            }
+        }
+
+        TypeOptionsByHash = new Dictionary<ushort, string>();
+        foreach (var (hash, option) in Strings(root, "typeOptions"))
+        {
+            if (ushort.TryParse(hash, out var key)) TypeOptionsByHash[key] = option;
+        }
     }
 
     public static string SkillId(string tradeName) => Get(SkillIds, tradeName);
     public static string SupportId(string tradeName) => Get(SupportIds, tradeName);
     public static string ArchetypeId(string display) => Get(ArchetypeIds, display);
+    // ratings are keyed by display name, the memory path only ever sees trade ids
+    public static string SkillName(string tradeId) => Get(SkillNamesById, tradeId);
+    public static string SupportName(string tradeId) => Get(SupportNamesById, tradeId);
     public static string SkillFromEffect(string grantedEffectId) => Get(Effects, grantedEffectId);
+
+    public static MercBuild BuildForHash(ushort hash) =>
+        BuildsByHash.TryGetValue(hash, out var build) ? build : null;
+
+    // infamous rows share a base build but are a separate warrant on trade, so this must not fold
+    public static string TypeOptionForHash(ushort hash) =>
+        TypeOptionsByHash.TryGetValue(hash, out var option) ? option : null;
 
     public static MercBuild BuildForArchetype(string display) =>
         !string.IsNullOrWhiteSpace(display) && BuildsByArchetype.TryGetValue(display.Trim(), out var build)
@@ -96,6 +127,18 @@ public static class MercData
 
     private static string Get(Dictionary<string, string> table, string key) =>
         !string.IsNullOrWhiteSpace(key) && table.TryGetValue(key.Trim(), out var value) ? value : null;
+
+    // first name wins, a couple of ids are shared by more than one display string
+    private static Dictionary<string, string> Reverse(Dictionary<string, string> table)
+    {
+        var flipped = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, id) in table)
+        {
+            if (!string.IsNullOrWhiteSpace(id)) flipped.TryAdd(id, name);
+        }
+
+        return flipped;
+    }
 
     private static Dictionary<string, string> Strings(JObject root, string name) =>
         root[name]?.ToObject<Dictionary<string, string>>() ?? new Dictionary<string, string>();
