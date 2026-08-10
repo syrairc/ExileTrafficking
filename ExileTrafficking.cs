@@ -63,8 +63,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 }
 
                 // only listens while you're actually on a warrant, so a plain letter key is fine
-                if (Settings.WarrantSearchKey.PressedOnce()) Open(FromMemory(warrant.Merc,
-                    Settings.EnabledSupports.Value, Settings.SearchRated ? Settings.Ratings : null));
+                if (Settings.WarrantSearchKey.PressedOnce()) Open(FromMemory(warrant.Merc, Settings));
             }
 
             if (snapshot == null) return;
@@ -134,12 +133,10 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
     private void Search(MercSnapshot snapshot)
     {
-        var ratings = Settings.SearchRated ? Settings.Ratings : null;
-
         var json = Settings.PreferMemory
-            ? FromMemory(MercenaryMemory.Encounter(GameController), Settings.EnabledSupports.Value, ratings)
+            ? FromMemory(MercenaryMemory.Encounter(GameController), Settings)
             : null;
-        json ??= BuildQueryJson(snapshot, Settings.EnabledSupports.Value, ratings);
+        json ??= BuildQueryJson(snapshot, Settings);
 
         Open(json);
     }
@@ -233,8 +230,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
-    private static string BuildQueryJson(MercSnapshot snapshot, int enabledSupports,
-        Dictionary<string, BuildRating> ratings)
+    private static string BuildQueryJson(MercSnapshot snapshot, ExileTraffickingSettings settings)
     {
         var typeOption = MercData.ArchetypeId(snapshot.Archetype);
         if (typeOption == null) return null;
@@ -257,12 +253,11 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             skills.Add((skillId, supports));
         }
 
-        return QueryJson(typeOption, skills, enabledSupports, ratings,
-            MercData.BuildForArchetype(snapshot.Archetype)?.Id);
+        return QueryJson(typeOption, skills, settings, MercData.BuildForArchetype(snapshot.Archetype)?.Id);
     }
 
     // the handler descriptor already carries trade ids, so this path never touches panel text
-    private static string FromMemory(MemMerc merc, int enabledSupports, Dictionary<string, BuildRating> ratings)
+    private static string FromMemory(MemMerc merc, ExileTraffickingSettings settings)
     {
         var build = merc?.Build;
         if (build == null || merc.Skills.Count == 0) return null;
@@ -276,23 +271,29 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             .Select(x => (x.TradeId, (IReadOnlyList<string>)x.SupportTradeIds.ToList()))
             .ToList();
 
-        return QueryJson(typeOption, skills, enabledSupports, ratings, build.Id);
+        return QueryJson(typeOption, skills, settings, build.Id);
     }
 
     public static string QueryJson(string typeOption,
-        IReadOnlyList<(string Skill, IReadOnlyList<string> Supports)> skills, int enabledSupports,
-        Dictionary<string, BuildRating> ratings = null, string buildId = null)
+        IReadOnlyList<(string Skill, IReadOnlyList<string> Supports)> skills,
+        ExileTraffickingSettings settings, string buildId = null)
     {
-        // a support rated good pulls its skill along, on its own it would match nothing
+        // with neither toggle on, ratings don't drive the query at all
+        var ratings = settings.IncludeGood || settings.IncludeBricked ? settings.Ratings : null;
+
+        bool Included(Rating rating) =>
+            rating == Rating.Good ? settings.IncludeGood : rating == Rating.Bricked && settings.IncludeBricked;
+
+        // a support you switched on pulls its skill along, on its own it would match nothing
         bool Wanted(string skillId, IReadOnlyList<string> supportIds)
         {
             var skillName = MercData.SkillName(skillId);
-            return Ratings.Skill(ratings, buildId, skillName) == Rating.Good ||
+            return Included(Ratings.Skill(ratings, buildId, skillName)) ||
                    supportIds.Any(x =>
-                       Ratings.Support(ratings, buildId, skillName, MercData.SupportName(x)) == Rating.Good);
+                       Included(Ratings.Support(ratings, buildId, skillName, MercData.SupportName(x))));
         }
 
-        // nothing rated good would leave every filter off, so fall back to the positional count
+        // nothing switched on would leave every filter off, so fall back to the positional count
         var rated = ratings != null && buildId != null && skills.Any(x => Wanted(x.Skill, x.Supports));
 
         var linkedGroups = new List<object>();
@@ -310,8 +311,8 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
             for (var i = 0; i < supportIds.Count; i++)
             {
                 var on = rated
-                    ? Ratings.Support(ratings, buildId, skillName, MercData.SupportName(supportIds[i])) == Rating.Good
-                    : i < enabledSupports;
+                    ? Included(Ratings.Support(ratings, buildId, skillName, MercData.SupportName(supportIds[i])))
+                    : i < settings.EnabledSupports.Value;
                 filters.Add(new { id = supportIds[i], disabled = !on });
             }
 

@@ -18,13 +18,16 @@ public class ExileTraffickingSettings : ISettings
     [Menu("League override", "Leave empty to read the league from the game.")]
     public TextNode LeagueOverride { get; set; } = new TextNode("");
 
-    [Menu("Read the mercenary from memory", "Builds the query from the encounter handler instead of the panel text. Falls back to the panel when memory has nothing.")]
+    [Menu("Read the mercenary from memory", "Reads the game's own data instead of the panel text.")]
     public ToggleNode PreferMemory { get; set; } = new ToggleNode(true);
 
-    [Menu("Search on your ratings", "Switches on the skills and supports you rated Good and leaves the rest in the query but disabled, ready to tick on the site. Overrides the support count below. Falls back to it when the build has nothing rated Good.")]
-    public ToggleNode SearchRated { get; set; } = new ToggleNode(true);
+    [Menu("Include good rated in query", "Switches on what you rated Good. Overrides the support count.")]
+    public ToggleNode IncludeGood { get; set; } = new ToggleNode(true);
 
-    [Menu("Enable # support gems in query", "How many supports per skill to switch on. 0 leaves them all off so you can widen the search yourself.")]
+    [Menu("Include bricked rated in query", "Switches on what you rated Bricked as well.")]
+    public ToggleNode IncludeBricked { get; set; } = new ToggleNode(false);
+
+    [Menu("Enable # support gems in query", "Used when no rating applies. 0 leaves them all off.")]
     public RangeNode<int> EnabledSupports { get; set; } = new RangeNode<int>(0, 0, 6);
 
     [Menu("Button X nudge", "Nudge from the panel's bottom-left anchor.")]
@@ -39,10 +42,10 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Show mercenary overlay in the world")]
     public ToggleNode WorldOverlay { get; set; } = new ToggleNode(true);
 
-    [Menu("Show a breakdown on hovered mercenary warrants", "Sits beside the game's own tooltip, on whichever side has the room.")]
+    [Menu("Show a breakdown on hovered warrants", "Sits beside the game's own tooltip.")]
     public ToggleNode WarrantTooltip { get; set; } = new ToggleNode(true);
 
-    [Menu("Warrant trade search key", "Press while hovering a warrant to open the trade search for that mercenary.")]
+    [Menu("Warrant trade search key", "Searches trade for the warrant you're hovering.")]
     public HotkeyNodeV2 WarrantSearchKey { get; set; } = new HotkeyNodeV2(Keys.NumPad0);
 
     [Menu("Overlay font size")]
@@ -54,7 +57,7 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Overlay X offset", "Nudge from the mercenary's head.")]
     public RangeNode<int> OverlayOffsetX { get; set; } = new RangeNode<int>(0, -1000, 1000);
 
-    [Menu("Overlay Y offset", "Nudge from the mercenary's head. Negative moves the block up.")]
+    [Menu("Overlay Y offset", "Nudge from the head. Negative moves it up.")]
     public RangeNode<int> OverlayOffsetY { get; set; } = new RangeNode<int>(-40, -1000, 1000);
 
     [Menu("Archetype line colour")]
