@@ -43,7 +43,7 @@ public class ExileTraffickingSettings : ISettings
     public ToggleNode WarrantTooltip { get; set; } = new ToggleNode(true);
 
     [Menu("Warrant trade search key", "Press while hovering a warrant to open the trade search for that mercenary.")]
-    public HotkeyNodeV2 WarrantSearchKey { get; set; } = new HotkeyNodeV2(Keys.T);
+    public HotkeyNodeV2 WarrantSearchKey { get; set; } = new HotkeyNodeV2(Keys.NumPad0);
 
     [Menu("Overlay font size")]
     public RangeNode<int> OverlayFontSize { get; set; } = new RangeNode<int>(16, 8, 48);
