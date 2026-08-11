@@ -175,8 +175,11 @@ public static class WarrantTooltip
     private static readonly Color Background = Color.FromRgba(0xD2141414);
     private static readonly Color HintColor = Color.FromRgba(0xFF8A8A8A);
 
-    // what's on a warrant never changes, so read it once per item and keep it
-    private static readonly Dictionary<uint, MemMerc> Cache = new();
+    // what's on a warrant never changes, so hold the last one rather than re-walking it every frame.
+    // keyed on the component address and not Entity.Id - ids are not unique for items, three
+    // inventory slots happily share one, and keying on that served warrants for unrelated items
+    private static long lastComponent;
+    private static MemMerc lastMerc;
 
     private static readonly TextBlock Block = new();
 
@@ -246,17 +249,18 @@ public static class WarrantTooltip
 
     private static MemMerc Merc(Entity item)
     {
-        if (Cache.TryGetValue(item.Id, out var cached)) return cached;
+        // resolve the component first, every frame. it's one dictionary lookup, and it's what rules
+        // out the currency/scarab/map you're actually hovering before any cached value gets a say
+        var component = MercenaryMemory.Component(item);
+        if (component == null || component.Address == 0) return null;
 
-        var merc = MercenaryMemory.Contract(item);
+        if (component.Address == lastComponent) return lastMerc;
 
-        // a miss is every other item you'll ever hover, no point remembering those
+        var merc = component.Merc;
         if (merc == null) return null;
 
-        // hover enough stash tabs and this grows forever, just bin the lot and refill
-        if (Cache.Count > 512) Cache.Clear();
-
-        Cache[item.Id] = merc;
+        lastComponent = component.Address;
+        lastMerc = merc;
         return merc;
     }
 
