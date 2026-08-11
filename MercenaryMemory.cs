@@ -83,6 +83,20 @@ public static class MercenaryMemory
             ? item.GetObject<MercenaryContract>(address)
             : null;
 
+    // which mercenary class the server put in this zone, known at load rather than on engaging. -1
+    // when there isn't one
+    public static int AreaClass(GameController game)
+    {
+        try
+        {
+            return MercenaryNative.ReadAreaClass(game.Memory, game?.IngameState?.Data?.Address ?? 0);
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
     // MechanicHandlers is every league mechanic's state object in one list, each tagged with its
     // Rulesets.dat row. that row index is the only handle we get, so it's how we pick ours out.
     public static long Handler(GameController game, int rulesetId) =>
@@ -136,10 +150,24 @@ public static class MercenaryNative
     public const int SkillRowHash = 104;       // row stride 114
     public const int SupportRowHash = 76;      // row stride 122
 
+    // MercenaryPlugin, an area-generation plugin off IngameState.Data. nothing to do with the ruleset
+    // handlers above: this one is filled at zone load, so it tells you the class before the mercenary
+    // has spawned, let alone been engaged. it holds one MercenaryClasses.dat row and the row index is
+    // the class, so the resolve is pointer arithmetic against the table rather than a name lookup.
+    public const int AreaPluginsFirst = 0xE0;
+    public const int AreaPluginsLast = 0xE8;
+    public const int PluginNameHash = 0x08;
+    public const ushort MercenaryPluginHash = 0x7F7D;
+    public const int PluginClassRow = 0x18;
+    public const int PluginClassAsset = 0x20;
+    public const int AssetData = 0x28;         // the parsed table, its first two fields are the rows
+    public const int ClassRowSize = 148;
+
     // a stale offset reads garbage rather than failing, so cap every count before looping on it
     public const int MaxRoster = 64;
     public const int MaxSkills = 32;
     public const int MaxSupports = 16;
+    public const int MaxAreaPlugins = 64;
 
     // there's only ever one offer, so it's a descriptor inlined at a fixed offset rather than a
     // vector. the flag is the only thing separating a live offer from whatever was in that memory
@@ -208,6 +236,38 @@ public static class MercenaryNative
         }
 
         return skills;
+    }
+
+    // the area's mercenary class as a MercenaryClasses.dat row index, or -1 when the zone has no
+    // mercenary in it. the row has to sit on a stride boundary inside the table
+    public static int ReadAreaClass(IMemory memory, long data)
+    {
+        if (data == 0) return -1;
+
+        foreach (var slot in Walk(memory, data + AreaPluginsFirst, data + AreaPluginsLast, 8, MaxAreaPlugins))
+        {
+            var plugin = memory.Read<long>(slot);
+            if (plugin == 0 || memory.Read<ushort>(plugin + PluginNameHash) != MercenaryPluginHash) continue;
+
+            var row = memory.Read<long>(plugin + PluginClassRow);
+            var asset = memory.Read<long>(plugin + PluginClassAsset);
+            if (row == 0 || asset == 0) return -1;
+
+            var table = memory.Read<long>(asset + AssetData);
+            if (table == 0) return -1;
+
+            var rowsFirst = memory.Read<long>(table);
+            var rowsLast = memory.Read<long>(table + 8);
+            if (rowsFirst == 0 || rowsLast <= rowsFirst) return -1;
+
+            var offset = row - rowsFirst;
+            if (offset < 0 || offset % ClassRowSize != 0) return -1;
+
+            var index = offset / ClassRowSize;
+            return index < (rowsLast - rowsFirst) / ClassRowSize ? (int)index : -1;
+        }
+
+        return -1;
     }
 
     // every list in here is a std::vector, which on the wire is just begin/end/capacity pointers with

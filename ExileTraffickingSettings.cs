@@ -42,6 +42,18 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Show mercenary overlay in the world")]
     public ToggleNode WorldOverlay { get; set; } = new ToggleNode(true);
 
+    [Menu("Show the area's mercenary class", "Read at zone load, before the mercenary spawns.")]
+    public ToggleNode AreaMercenary { get; set; } = new ToggleNode(true);
+
+    [Menu("Area line X inset", "From the right edge of the screen.")]
+    public RangeNode<int> AreaOffsetX { get; set; } = new RangeNode<int>(320, 0, 3000);
+
+    [Menu("Area line Y inset", "From the top of the screen.")]
+    public RangeNode<int> AreaOffsetY { get; set; } = new RangeNode<int>(120, 0, 2000);
+
+    [Menu("Area line text scale")]
+    public RangeNode<float> AreaTextScale { get; set; } = new RangeNode<float>(1f, 0.5f, 3f);
+
     [Menu("Show a breakdown on hovered warrants", "Sits beside the game's own tooltip.")]
     public ToggleNode WarrantTooltip { get; set; } = new ToggleNode(true);
 

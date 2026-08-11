@@ -16,8 +16,44 @@ public sealed class MercBuild
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Skills { get; init; }
 }
 
+public sealed record MercClass(string Id, string House, string Archetype);
+
 public static class MercData
 {
+    // MercenaryClasses.dat, in row order - the preload hands you an index into this. house and
+    // archetype live in the row's icon paths rather than mercdata.json, so they're spelled out, but
+    // the build list is derived below so it tracks the data instead of drifting from it.
+    // archetype alone never identifies a class: every one but Scion has two classes in the same
+    // house, so the builds are the part that actually pins it down.
+    private static readonly MercClass[] ClassRows =
+    {
+        new("ElementalWitch", "Cyaxan", "Witch"),
+        new("ChaosMinionWitch", "Cyaxan", "Witch"),
+        new("TrapsMinesShadow", "Azadi", "Shadow"),
+        new("Crit1HShadow", "Azadi", "Shadow"),
+        new("MeleeAOEMarauder", "Keita", "Marauder"),
+        new("MeleeStrikesMarauder", "Keita", "Marauder"),
+        new("MiscScion", "Bardiya", "Scion"),
+        new("AurasMinionsTemplar", "Keita", "Templar"),
+        new("PhysConvertTemplar", "Keita", "Templar"),
+        new("NonEleBowRanger", "Cyaxan", "Ranger"),
+        new("EleBowRanger", "Cyaxan", "Ranger"),
+        new("PhysicalDuelist", "Azadi", "Duelist"),
+        new("MeleeAOEStrikeDuelist", "Azadi", "Duelist"),
+    };
+
+    public static MercClass ClassAt(int index) =>
+        index >= 0 && index < ClassRows.Length ? ClassRows[index] : null;
+
+    // every build that class can roll, 2 or 3 of them. infamous variants are aliases on these rather
+    // than builds of their own, so they don't need filtering out
+    public static IReadOnlyList<string> BuildsInClass(string classId) =>
+        BuildsById.Values
+            .Where(x => x.Class == classId)
+            .Select(x => x.Name)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     private static readonly Dictionary<string, string> SkillIds;
     private static readonly Dictionary<string, string> SupportIds;
     private static readonly Dictionary<string, string> SkillNamesById;

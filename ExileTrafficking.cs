@@ -34,10 +34,40 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
+    // resolved once per zone and kept, the class can't change under you
+    private MercClass areaMercenary;
+    private int areaAttempts;
+
+    public override void AreaChange(AreaInstance area)
+    {
+        areaMercenary = null;
+        areaAttempts = AreaResolveAttempts;
+    }
+
+    // the area plugin vector isn't populated the instant AreaChange fires, so keep asking for a
+    // couple of seconds before giving up on the zone
+    private const int AreaResolveAttempts = 120;
+
+    public override Job Tick()
+    {
+        if (areaMercenary != null || areaAttempts <= 0) return null;
+        if (!GameController.InGame || GameController.IsLoading) return null;
+
+        areaAttempts--;
+        areaMercenary = MercData.ClassAt(MercenaryMemory.AreaClass(GameController));
+        return null;
+    }
+
     public override void Render()
     {
         try
         {
+            if (areaMercenary != null && Settings.AreaMercenary)
+            {
+                AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary,
+                    GameController.Window.GetWindowRectangleTimeCache);
+            }
+
             var ui = GameController.IngameState.IngameUi;
             Element window = ui.MercenaryEncounterWindow;
             if (window == null || !window.IsValid || !window.IsVisible) window = ui.MirageWishesPanel;

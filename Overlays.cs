@@ -20,6 +20,9 @@ namespace ExileTrafficking;
 // block drifts off its anchor as the line count changes
 internal sealed class TextBlock
 {
+    // panel colour for anything that wants a backdrop behind its lines
+    public static readonly Color Backdrop = Color.FromRgba(0xD2141414);
+
     // no stroked text in ExileCore, so lay black down eight ways first
     private static readonly Vector2[] StrokeOffsets =
     {
@@ -172,7 +175,6 @@ public static class WarrantTooltip
     private const float Padding = 6f;
     private const float Indent = 18f;
 
-    private static readonly Color Background = Color.FromRgba(0xD2141414);
     private static readonly Color HintColor = Color.FromRgba(0xFF8A8A8A);
 
     // what's on a warrant never changes, so hold the last one rather than re-walking it every frame.
@@ -243,7 +245,7 @@ public static class WarrantTooltip
         x = Math.Clamp(x, 0f, Math.Max(0f, window.Width - w));
         var y = Math.Clamp(hovered.Anchor.Top, 0f, Math.Max(0f, window.Height - h));
 
-        graphics.DrawBox(new RectangleF(x, y, w, h), Background);
+        graphics.DrawBox(new RectangleF(x, y, w, h), TextBlock.Backdrop);
         Block.Draw(graphics, x + Padding, y + Padding, FontAlign.Left);
     }
 
@@ -275,6 +277,36 @@ public static class WarrantTooltip
         var name = (infamous ? build.Infamous.FirstOrDefault() ?? $"Infamous {build.Name}" : build.Name) ?? "";
 
         return $"{name.ToUpperInvariant()}  LVL {merc.Level}";
+    }
+}
+
+public static class AreaMercenaryOverlay
+{
+    private const float Padding = 6f;
+
+    private static readonly Color BuildsColor = Color.FromRgba(0xFFB8B8B8);
+    private static readonly TextBlock Block = new();
+
+    public static void Draw(Graphics graphics, ExileTraffickingSettings settings, MercClass merc,
+        RectangleF window)
+    {
+        using var _ = graphics.SetTextScale(settings.AreaTextScale.Value);
+
+        Block.Clear();
+        Block.Add(graphics, $"{merc.House} {merc.Archetype}", settings.HeaderColor.Value);
+
+        var builds = MercData.BuildsInClass(merc.Id);
+        if (builds.Count > 0) Block.Add(graphics, string.Join(", ", builds), BuildsColor);
+
+        var right = window.Width - settings.AreaOffsetX.Value;
+        var top = (float)settings.AreaOffsetY.Value;
+
+        graphics.DrawBox(
+            new RectangleF(right - Block.Width - Padding, top - Padding, Block.Width + Padding * 2f,
+                Block.Height + Padding * 2f),
+            TextBlock.Backdrop);
+
+        Block.Draw(graphics, right, top, FontAlign.Right);
     }
 }
 
