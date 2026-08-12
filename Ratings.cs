@@ -24,11 +24,43 @@ public class SkillRating
 
 public class BuildRating
 {
+    public Rating Rating { get; set; }
     public Dictionary<string, SkillRating> Skills { get; set; } = new();
 }
 
 public static class Ratings
 {
+    public static Rating Build(Dictionary<string, BuildRating> store, string buildId) =>
+        store != null && store.TryGetValue(buildId ?? "", out var build) ? build.Rating : Rating.Neutral;
+
+    public static void SetBuild(Dictionary<string, BuildRating> store, string buildId, Rating rating)
+    {
+        if (store == null || string.IsNullOrEmpty(buildId)) return;
+
+        if (!store.TryGetValue(buildId, out var build))
+        {
+            if (rating == Rating.Neutral) return;
+            store[buildId] = build = new BuildRating();
+        }
+
+        build.Rating = rating;
+        if (rating == Rating.Neutral && build.Skills.Count == 0) store.Remove(buildId);
+    }
+
+    // good beats bricked, so one archetype worth stopping for still colours the whole class
+    public static Rating Best(Dictionary<string, BuildRating> store, IEnumerable<string> buildIds)
+    {
+        var best = Rating.Neutral;
+        foreach (var id in buildIds ?? Enumerable.Empty<string>())
+        {
+            var rating = Build(store, id);
+            if (rating == Rating.Good) return Rating.Good;
+            if (rating == Rating.Bricked) best = Rating.Bricked;
+        }
+
+        return best;
+    }
+
     public static Rating Skill(Dictionary<string, BuildRating> store, string buildId, string skill) =>
         Find(store, buildId, skill)?.Rating ?? Rating.Neutral;
 
@@ -61,7 +93,8 @@ public static class Ratings
 
     public static int Count(Dictionary<string, BuildRating> store, string buildId) =>
         store != null && store.TryGetValue(buildId ?? "", out var build)
-            ? build.Skills.Values.Sum(x => (x.Rating == Rating.Neutral ? 0 : 1) + x.Supports.Count)
+            ? (build.Rating == Rating.Neutral ? 0 : 1) +
+              build.Skills.Values.Sum(x => (x.Rating == Rating.Neutral ? 0 : 1) + x.Supports.Count)
             : 0;
 
     public static Color Colour(Rating rating, Color good, Color neutral, Color bricked) => rating switch
@@ -114,7 +147,7 @@ public static class Ratings
             build.Skills.Remove(skill);
         }
 
-        if (build.Skills.Count == 0) store.Remove(buildId);
+        if (build.Skills.Count == 0 && build.Rating == Rating.Neutral) store.Remove(buildId);
     }
 }
 
@@ -126,11 +159,13 @@ public static class ShareCode
     // way above a full 36-archetype table, just here to stop a crafted string inflating unbounded
     private const int MaxDecodedBytes = 256 * 1024;
 
-    // wire shape: {"v":1,"b":{buildId:{skill:[rating,{support:rating}]}}}
+    // wire shape: {"v":1,"b":{buildId:{skill:[rating,{support:rating}]}},"a":{buildId:rating}}
+    // "a" arrived after "b" and stays optional, so codes written before it still read back fine
     private class Payload
     {
         [JsonProperty("v")] public int Version { get; set; } = 1;
         [JsonProperty("b")] public Dictionary<string, Dictionary<string, object[]>> Builds { get; set; } = new();
+        [JsonProperty("a")] public Dictionary<string, int> Archetypes { get; set; } = new();
     }
 
     public static string Encode(Dictionary<string, BuildRating> store, string buildId = null)
@@ -151,6 +186,7 @@ public static class ShareCode
             }
 
             if (skills.Count > 0) payload.Builds[id] = skills;
+            if (build.Rating != Rating.Neutral) payload.Archetypes[id] = (int)build.Rating;
         }
 
         var json = JsonConvert.SerializeObject(payload);
@@ -207,6 +243,11 @@ public static class ShareCode
                 }
             }
 
+            foreach (var (id, rating) in payload.Archetypes ?? new Dictionary<string, int>())
+            {
+                Ratings.SetBuild(store, id, ClampRating(rating));
+            }
+
             return store;
         }
         catch
@@ -227,6 +268,8 @@ public static class ShareCode
         foreach (var (id, build) in incoming)
         {
             if (replace) store.Remove(id);
+
+            if (build.Rating != Rating.Neutral) Ratings.SetBuild(store, id, build.Rating);
 
             foreach (var (skill, entry) in build.Skills)
             {

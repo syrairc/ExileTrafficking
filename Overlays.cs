@@ -292,22 +292,31 @@ public static class AreaMercenaryOverlay
     {
         using var _ = graphics.SetTextScale(settings.AreaTextScale.Value);
 
+        var builds = MercData.ClassBuilds(merc.Id);
+        var verdict = Ratings.Best(settings.Ratings, builds.Select(x => x.Id));
+
         Block.Clear();
         Block.Add(graphics, $"{merc.House} {merc.Archetype}", settings.HeaderColor.Value);
-
-        var builds = MercData.BuildsInClass(merc.Id);
-        if (builds.Count > 0) Block.Add(graphics, string.Join(", ", builds), BuildsColor);
+        if (builds.Count > 0) Block.Add(graphics, string.Join(", ", builds.Select(x => x.Name)), BuildsColor);
 
         var right = window.Width - settings.AreaOffsetX.Value;
         var top = (float)settings.AreaOffsetY.Value;
+        var box = new RectangleF(right - Block.Width - Padding, top - Padding, Block.Width + Padding * 2f,
+            Block.Height + Padding * 2f);
 
-        graphics.DrawBox(
-            new RectangleF(right - Block.Width - Padding, top - Padding, Block.Width + Padding * 2f,
-                Block.Height + Padding * 2f),
-            TextBlock.Backdrop);
+        // an unrated class looks exactly as it did before the tint existed
+        var style = verdict == Rating.Neutral ? "Off" : settings.AreaRatingStyle.Value;
+        var tint = Ratings.Colour(verdict, settings);
+
+        graphics.DrawBox(box, style is "Background" or "Both" ? Wash(tint) : TextBlock.Backdrop);
+        if (style is "Border" or "Both") graphics.DrawFrame(box, tint, 2);
 
         Block.Draw(graphics, right, top, FontAlign.Right);
     }
+
+    // full strength behind the text is unreadable, so keep the hue and drop it to backdrop darkness
+    private static Color Wash(Color color) =>
+        new((byte)(color.R * 0.35f), (byte)(color.G * 0.35f), (byte)(color.B * 0.35f), TextBlock.Backdrop.A);
 }
 
 // rated skills and supports get a frame drawn round the game's own panel widgets

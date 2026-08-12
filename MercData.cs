@@ -47,12 +47,14 @@ public static class MercData
 
     // every build that class can roll, 2 or 3 of them. infamous variants are aliases on these rather
     // than builds of their own, so they don't need filtering out
-    public static IReadOnlyList<string> BuildsInClass(string classId) =>
+    public static IReadOnlyList<MercBuild> ClassBuilds(string classId) =>
         BuildsById.Values
             .Where(x => x.Class == classId)
-            .Select(x => x.Name)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    public static IReadOnlyList<string> BuildsInClass(string classId) =>
+        ClassBuilds(classId).Select(x => x.Name).ToList();
 
     private static readonly Dictionary<string, string> SkillIds;
     private static readonly Dictionary<string, string> SupportIds;

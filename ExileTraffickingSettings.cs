@@ -8,6 +8,7 @@ using ExileCore.Shared.Nodes;
 using ExileImGui;
 using ImGuiNET;
 using SharpDX;
+using Vector2 = System.Numerics.Vector2;
 
 namespace ExileTrafficking;
 
@@ -54,6 +55,16 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Area line text scale")]
     public RangeNode<float> AreaTextScale { get; set; } = new RangeNode<float>(1f, 0.5f, 3f);
 
+    [Menu("Area line rating tint", "Colours the box by the best rating among the class's archetypes.")]
+    public ListNode AreaRatingStyle { get; set; } = new ListNode
+    {
+        Values = new List<string> { "Off", "Background", "Border", "Both" },
+        Value = "Border",
+    };
+
+    [Menu("Preload alert volume", "alert.wav, played when a class holding an alerted archetype loads. 0 is off.")]
+    public RangeNode<float> AlertVolume { get; set; } = new RangeNode<float>(0.5f, 0f, 1f);
+
     [Menu("Show a breakdown on hovered warrants", "Sits beside the game's own tooltip.")]
     public ToggleNode WarrantTooltip { get; set; } = new ToggleNode(true);
 
@@ -85,6 +96,9 @@ public class ExileTraffickingSettings : ISettings
     public ColorNode BrickedColor { get; set; } = new ColorNode(Color.FromRgba(0xFF5C5CE5));
 
     public Dictionary<string, BuildRating> Ratings { get; set; } = new Dictionary<string, BuildRating>();
+
+    // build ids you want alert.wav on. sparse, and deliberately outside Ratings so it stays out of share codes
+    public HashSet<string> AlertBuilds { get; set; } = new HashSet<string>();
 }
 
 // the settings page. everything above is drawn by the engine off its [Menu] attributes, everything
@@ -118,6 +132,28 @@ public static class SettingsUi
 
         rating = Options[clicked];
         return true;
+    }
+
+    private const string SoundLabel = "sound";
+
+    // on is the good colour rather than a second palette entry, it only ever means "shout about this one"
+    private static void Sound(ExileTraffickingSettings settings, string buildId)
+    {
+        var on = settings.AlertBuilds.Contains(buildId);
+        var pos = ImGui.GetCursorScreenPos();
+
+        // an invisible button owns a real id, so it wins the click off the header it sits on top of
+        var clicked = ImGui.InvisibleButton("##sound", ImGui.CalcTextSize(SoundLabel));
+
+        // off is the theme's plain text, the disabled grey vanishes against the header fill
+        var tint = on ? EColor.U32(settings.GoodColor.Value) : ImGui.GetColorU32(ImGuiCol.Text);
+
+        ImGui.GetWindowDrawList().AddText(pos, tint, SoundLabel);
+
+        if (!clicked) return;
+
+        if (on) settings.AlertBuilds.Remove(buildId);
+        else settings.AlertBuilds.Add(buildId);
     }
 
     private static string search = "";
@@ -179,19 +215,35 @@ public static class SettingsUi
                 ? $"{build.Name}   {build.Skills.Count} skills - {rated} rated###{build.Id}"
                 : $"{build.Name}   {build.Skills.Count} skills###{build.Id}";
 
-            if (!ImGui.CollapsingHeader(label)) continue;
-
             ImGui.PushID(build.Id);
-            if (rated > 0 && ImGui.SmallButton("Export this archetype"))
-            {
-                ImGui.SetClipboardText(ShareCode.Encode(settings.Ratings, build.Id));
-            }
 
-            if (Tables.Begin("##skills", Columns, showHeader: false, flags: TableFlags))
+            // the header eats the whole row, so it has to let the buttons overlapping it win the click
+            ImGui.SetNextItemAllowOverlap();
+            var open = ImGui.CollapsingHeader(label);
+
+            // riding the header line keeps the archetype's own rating readable while it's collapsed
+            var ratingX = ImGui.GetContentRegionMax().X - Columns[1].Width - 6f;
+
+            ImGui.SameLine(ratingX - ImGui.CalcTextSize(SoundLabel).X - 12f);
+            Sound(settings, build.Id);
+
+            ImGui.SameLine(ratingX);
+            var verdict = Ratings.Build(settings.Ratings, build.Id);
+            if (Rate("##build", ref verdict)) Ratings.SetBuild(settings.Ratings, build.Id, verdict);
+
+            if (open)
             {
-                var row = 0;
-                foreach (var skill in skills) DrawSkill(settings, build, skill, ref row);
-                Tables.End();
+                if (rated > 0 && ImGui.SmallButton("Export this archetype"))
+                {
+                    ImGui.SetClipboardText(ShareCode.Encode(settings.Ratings, build.Id));
+                }
+
+                if (Tables.Begin("##skills", Columns, showHeader: false, flags: TableFlags))
+                {
+                    var row = 0;
+                    foreach (var skill in skills) DrawSkill(settings, build, skill, ref row);
+                    Tables.End();
+                }
             }
 
             ImGui.PopID();

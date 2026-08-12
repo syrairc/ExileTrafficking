@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using ExileCore;
 using ExileCore.PoEMemory;
@@ -34,6 +35,41 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
     }
 
+    // null when the file went missing, which is the same as the alert being switched off
+    private string alertPath;
+
+    public override bool Initialise()
+    {
+        alertPath = Asset("alert.wav");
+
+        // decoding on the first alert would hitch it, but a bad wav must not take the whole plugin down
+        try
+        {
+            if (alertPath != null) GameController.SoundController.PreloadSound(alertPath);
+        }
+        catch
+        {
+            alertPath = null;
+        }
+
+        return true;
+    }
+
+    // a compiled plugin sits beside its copied content, a source build reports the source folder, and
+    // which one you get depends on how HUD loaded you, so try both
+    private string Asset(params string[] parts)
+    {
+        foreach (var dir in new[] { DirectoryFullName, Path.GetDirectoryName(GetType().Assembly.Location) })
+        {
+            if (string.IsNullOrEmpty(dir)) continue;
+
+            var path = Path.Combine(parts.Prepend(dir).ToArray());
+            if (File.Exists(path)) return path;
+        }
+
+        return null;
+    }
+
     // resolved once per zone and kept, the class can't change under you
     private MercClass areaMercenary;
     private int areaAttempts;
@@ -55,7 +91,18 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
         areaAttempts--;
         areaMercenary = MercData.ClassAt(MercenaryMemory.AreaClass(GameController));
+
+        // AreaChange is what clears areaMercenary, so this can only land once a zone
+        if (areaMercenary != null) Alert(areaMercenary);
         return null;
+    }
+
+    private void Alert(MercClass merc)
+    {
+        if (alertPath == null || Settings.AlertVolume.Value <= 0f) return;
+        if (!MercData.ClassBuilds(merc.Id).Any(x => Settings.AlertBuilds.Contains(x.Id))) return;
+
+        GameController.SoundController.PlaySound(alertPath, Settings.AlertVolume.Value);
     }
 
     public override void Render()

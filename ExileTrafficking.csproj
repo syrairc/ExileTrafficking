@@ -33,6 +33,8 @@
 
   <ItemGroup>
     <EmbeddedResource Include="mercdata.json" />
+    <!--the sound controller wants a file on disk, so this one can't be embedded like mercdata-->
+    <None Include="alert.wav" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,3 @@
+Build failed:
+[8/11/2026 10:17:12 PM, C:\Exile\ExileAPI\Plugins\Source\ExileTrafficking\ExileTrafficking.cs(30, 24)] CS7036: There is no argument given that corresponds to the required parameter 'graphics' of 'SettingsUi.Draw(ExileTraffickingSettings, Action, Graphics, string)'
+[8/11/2026 10:17:12 PM, C:\Exile\ExileAPI\Plugins\Source\ExileTrafficking\ExileTrafficking.cs(44, 20)] CS0122: 'SettingsUi.LoadIcons(Graphics, string)' is inaccessible due to its protection level
