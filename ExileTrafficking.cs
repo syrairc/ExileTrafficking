@@ -109,9 +109,14 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     {
         try
         {
+            // one entity walk feeds both overlays, and neither being on means it isn't worth doing
+            var sightings = Settings.WorldOverlay || Settings.AreaMercenary
+                ? WorldOverlay.Sightings(GameController)
+                : new List<MercSighting>();
+
             if (areaMercenary != null && Settings.AreaMercenary)
             {
-                AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary,
+                AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary, sightings.FirstOrDefault(),
                     GameController.Window.GetWindowRectangleTimeCache);
             }
 
@@ -126,7 +131,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
             if (Settings.WorldOverlay)
             {
-                WorldOverlay.Draw(GameController, Graphics, Settings,
+                WorldOverlay.Draw(GameController, Graphics, Settings, sightings,
                     snapshot != null ? window.GetClientRect() : (RectangleF?)null);
             }
 

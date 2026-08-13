@@ -121,6 +121,11 @@ public static class MercData
     public static string TypeOptionForHash(ushort hash) =>
         TypeOptionsByHash.TryGetValue(hash, out var option) ? option : null;
 
+    // infamous rows fold to the same build, so the alias is the only name that tells the two apart.
+    // a build with no alias listed still has to read as infamous rather than silently as its base
+    public static string DisplayName(MercBuild build, bool infamous) =>
+        !infamous ? build?.Name ?? "" : build?.Infamous.FirstOrDefault() ?? $"Infamous {build?.Name}";
+
     public static MercBuild BuildForArchetype(string display) =>
         !string.IsNullOrWhiteSpace(display) && BuildsByArchetype.TryGetValue(display.Trim(), out var build)
             ? build

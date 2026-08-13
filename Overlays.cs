@@ -70,8 +70,15 @@ internal sealed class TextBlock
     }
 }
 
+// one hireable mercenary standing in the zone, resolved once a frame and shared by the overlays that
+// want it. the area line needs the same walk the world overlay does, so doing it twice would be waste
+public sealed record MercSighting(Entity Entity, MercBuild Build, bool Certain, bool Infamous,
+    IReadOnlyList<string> Skills, int Level);
+
 public static class WorldOverlay
 {
+    private const float Padding = 6f;
+
     // merc slots are the packed ids, 1024 apart, starting here. everything below is movement and daemons
     public const int MercSkillIdBase = 32896;
 
@@ -97,16 +104,9 @@ public static class WorldOverlay
         return names;
     }
 
-    // text is centre aligned on x, so the block is as wide as its widest line
-    private static readonly TextBlock Block = new();
-
-    public static void Draw(GameController game, Graphics graphics, ExileTraffickingSettings settings,
-        RectangleF? panel = null)
+    public static List<MercSighting> Sightings(GameController game)
     {
-        var window = game.Window.GetWindowRectangleTimeCache;
-
-        // 16 is the default overlay font size, treat it as scale 1.0
-        using var _ = graphics.SetTextScale(settings.OverlayFontSize.Value / 16f);
+        var found = new List<MercSighting>();
 
         foreach (var entity in game.EntityListWrapper.OnlyValidEntities)
         {
@@ -115,14 +115,43 @@ public static class WorldOverlay
             var skills = SkillNames(entity);
             if (skills.Count == 0) continue;
 
-            var build = MercData.Infer(skills, entity.Path, out var certain);
-            var buildId = build?.Id;
+            // the component names the exact build row, which settles the archetype outright and is
+            // the only thing that tells infamous from base - those two share a skill pool and a path.
+            // inference is still the fallback for when the read comes back empty
+            var hash = MercenaryMemory.EntityBuildHash(game, entity);
+            var build = MercData.BuildForHash(hash);
+            var certain = build != null;
+            if (build == null) build = MercData.Infer(skills, entity.Path, out certain);
+
+            var infamous = MercData.TypeOptionForHash(hash)?
+                .EndsWith("Noble", StringComparison.Ordinal) == true;
+
+            found.Add(new MercSighting(entity, build, certain, infamous, skills,
+                MercData.Level(entity.Path)));
+        }
+
+        return found;
+    }
+
+    // text is centre aligned on x, so the block is as wide as its widest line
+    private static readonly TextBlock Block = new();
+
+    public static void Draw(GameController game, Graphics graphics, ExileTraffickingSettings settings,
+        IReadOnlyList<MercSighting> sightings, RectangleF? panel = null)
+    {
+        var window = game.Window.GetWindowRectangleTimeCache;
+
+        // 16 is the default overlay font size, treat it as scale 1.0
+        using var _ = graphics.SetTextScale(settings.OverlayFontSize.Value / 16f);
+
+        foreach (var sighting in sightings)
+        {
+            var entity = sighting.Entity;
+            var skills = sighting.Skills;
+            var buildId = sighting.Build?.Id;
 
             Block.Clear();
-            Block.Add(graphics, build == null
-                ? $"UNKNOWN  LVL {MercData.Level(entity.Path)}"
-                : $"{build.Name.ToUpperInvariant()}{(certain ? "" : "?")}  LVL {MercData.Level(entity.Path)}",
-                settings.HeaderColor.Value);
+            Block.Add(graphics, Header(sighting), settings.HeaderColor.Value);
 
             foreach (var skill in skills)
             {
@@ -153,9 +182,21 @@ public static class WorldOverlay
                 continue;
             }
 
+            if (settings.OverlayBackground)
+            {
+                graphics.DrawBox(new RectangleF(origin.X - Block.Width / 2f - Padding, top - Padding,
+                    Block.Width + Padding * 2f, Block.Height + Padding * 2f), TextBlock.Backdrop);
+            }
+
             Block.Draw(graphics, origin.X, top, FontAlign.Center);
         }
     }
+
+    public static string Header(MercSighting sighting) =>
+        sighting.Build == null
+            ? $"UNKNOWN  LVL {sighting.Level}"
+            : $"{MercData.DisplayName(sighting.Build, sighting.Infamous).ToUpperInvariant()}" +
+              $"{(sighting.Certain ? "" : "?")}  LVL {sighting.Level}";
 
     private static string Word(Rating rating) => rating switch
     {
@@ -274,9 +315,8 @@ public static class WarrantTooltip
         // infamous rows fold to the same build, the trade option is the only thing that keeps the
         // two apart, and it's the name the game prints
         var infamous = MercData.TypeOptionForHash(merc.BuildHash)?.EndsWith("Noble", StringComparison.Ordinal) == true;
-        var name = (infamous ? build.Infamous.FirstOrDefault() ?? $"Infamous {build.Name}" : build.Name) ?? "";
 
-        return $"{name.ToUpperInvariant()}  LVL {merc.Level}";
+        return $"{MercData.DisplayName(build, infamous).ToUpperInvariant()}  LVL {merc.Level}";
     }
 }
 
@@ -288,16 +328,37 @@ public static class AreaMercenaryOverlay
     private static readonly TextBlock Block = new();
 
     public static void Draw(Graphics graphics, ExileTraffickingSettings settings, MercClass merc,
-        RectangleF window)
+        MercSighting sighting, RectangleF window)
     {
         using var _ = graphics.SetTextScale(settings.AreaTextScale.Value);
 
         var builds = MercData.ClassBuilds(merc.Id);
-        var verdict = Ratings.Best(settings.Ratings, builds.Select(x => x.Id));
+
+        // once the mercenary is actually standing there the class is guesswork nobody needs, so the
+        // line narrows to the one archetype and its own rating rather than the class's best
+        var verdict = sighting?.Build != null
+            ? Ratings.Build(settings.Ratings, sighting.Build.Id)
+            : Ratings.Best(settings.Ratings, builds.Select(x => x.Id));
 
         Block.Clear();
-        Block.Add(graphics, $"{merc.House} {merc.Archetype}", settings.HeaderColor.Value);
-        if (builds.Count > 0) Block.Add(graphics, string.Join(", ", builds.Select(x => x.Name)), BuildsColor);
+        if (sighting != null)
+        {
+            Block.Add(graphics, WorldOverlay.Header(sighting), settings.HeaderColor.Value);
+
+            if (settings.AreaSkills)
+            {
+                foreach (var skill in sighting.Skills)
+                {
+                    Block.Add(graphics, skill,
+                        Ratings.Colour(Ratings.Skill(settings.Ratings, sighting.Build?.Id, skill), settings));
+                }
+            }
+        }
+        else
+        {
+            Block.Add(graphics, $"{merc.House} {merc.Archetype}", settings.HeaderColor.Value);
+            if (builds.Count > 0) Block.Add(graphics, string.Join(", ", builds.Select(x => x.Name)), BuildsColor);
+        }
 
         var right = window.Width - settings.AreaOffsetX.Value;
         var top = (float)settings.AreaOffsetY.Value;

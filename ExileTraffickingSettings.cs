@@ -55,6 +55,9 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Area line text scale")]
     public RangeNode<float> AreaTextScale { get; set; } = new RangeNode<float>(1f, 0.5f, 3f);
 
+    [Menu("Area line skills", "Lists the mercenary's skills there too, once it has spawned.")]
+    public ToggleNode AreaSkills { get; set; } = new ToggleNode(true);
+
     [Menu("Area line rating tint", "Colours the box by the best rating among the class's archetypes.")]
     public ListNode AreaRatingStyle { get; set; } = new ListNode
     {
@@ -76,6 +79,9 @@ public class ExileTraffickingSettings : ISettings
 
     [Menu("Overlay verdict line")]
     public ToggleNode OverlayVerdict { get; set; } = new ToggleNode(true);
+
+    [Menu("Overlay background", "Solid panel behind the world overlay instead of bare outlined text.")]
+    public ToggleNode OverlayBackground { get; set; } = new ToggleNode(true);
 
     [Menu("Overlay X offset", "Nudge from the mercenary's head.")]
     public RangeNode<int> OverlayOffsetX { get; set; } = new RangeNode<int>(0, -1000, 1000);

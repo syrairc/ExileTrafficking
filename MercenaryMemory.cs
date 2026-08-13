@@ -83,6 +83,22 @@ public static class MercenaryMemory
             ? item.GetObject<MercenaryContract>(address)
             : null;
 
+    // the build row hash off a mercenary standing in the zone. same CacheComp trick as the contract
+    // above, core has no Mercenary wrapper either. 0 when the component isn't there or reads empty
+    public static ushort EntityBuildHash(GameController game, Entity entity)
+    {
+        try
+        {
+            return entity != null && entity.CacheComp.TryGetValue("Mercenary", out var address)
+                ? MercenaryNative.ReadEntityBuildHash(game.Memory, address)
+                : (ushort)0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
     // which mercenary class the server put in this zone, known at load rather than on engaging. -1
     // when there isn't one
     public static int AreaClass(GameController game)
@@ -143,6 +159,12 @@ public static class MercenaryNative
     // descriptor just inlined, no pointer chase. reader is ItemExtraData_ReadMercenaryInfo.
     public const int ContractInfo = 0x10;
 
+    // Mercenary component, off a spawned mercenary. vtable then owner then a handful of pointers, and
+    // this one is the MercenaryBuilds.dat row itself rather than a descriptor. worth having because
+    // infamous is its own row: the base and the infamous variant share a skill pool and a metadata
+    // path, so the row is the only thing on the entity that tells them apart.
+    public const int ComponentBuildRow = 0x20;
+
     // HASH16 inside each loaded .dat row. it's the u16 the network protocol keys rows by, and 
     // skills and supports it doubles as the trade site's id number (mercenary.skill_<hash>).
     // each one is the 2-byte hole the row layout leaves between two string pointers.
@@ -192,6 +214,16 @@ public static class MercenaryNative
         }
 
         return roster;
+    }
+
+    // the row pointer lands in the same table the descriptors point at, so the HASH16 sits at the
+    // same offset into it
+    public static ushort ReadEntityBuildHash(IMemory memory, long component)
+    {
+        if (component == 0) return 0;
+
+        var row = memory.Read<long>(component + ComponentBuildRow);
+        return row == 0 ? (ushort)0 : memory.Read<ushort>(row + BuildRowHash);
     }
 
     // the shared bit. offer, roster entry and warrant item all end up here with a pointer to the same
