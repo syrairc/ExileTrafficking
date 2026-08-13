@@ -43,6 +43,12 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Show mercenary overlay in the world")]
     public ToggleNode WorldOverlay { get; set; } = new ToggleNode(true);
 
+    [Menu("Show overlay for wild mercenaries", "The extras a scarab drops. Name and skills only, no ratings.")]
+    public ToggleNode WildOverlay { get; set; } = new ToggleNode(true);
+
+    [Menu("Show mercenary level", "Adds LVL to the overlay headers.")]
+    public ToggleNode ShowLevel { get; set; } = new ToggleNode(false);
+
     [Menu("Show the area's mercenary class", "Read at zone load, before the mercenary spawns.")]
     public ToggleNode AreaMercenary { get; set; } = new ToggleNode(true);
 

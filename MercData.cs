@@ -112,7 +112,16 @@ public static class MercData
     // ratings are keyed by display name, the memory path only ever sees trade ids
     public static string SkillName(string tradeId) => Get(SkillNamesById, tradeId);
     public static string SupportName(string tradeId) => Get(SupportNamesById, tradeId);
-    public static string SkillFromEffect(string grantedEffectId) => Get(Effects, grantedEffectId);
+    // a merc skill has two granted effects: the hired one the table is keyed by
+    // (ShieldCrushMercenary) and the encounter one an offer in the world actually casts
+    // (ShieldCrushMercenaryEncounter). same skill, so fall through to the base id
+    public static string SkillFromEffect(string grantedEffectId) =>
+        Get(Effects, grantedEffectId) ??
+        (grantedEffectId != null && grantedEffectId.EndsWith(EncounterSuffix, StringComparison.Ordinal)
+            ? Get(Effects, grantedEffectId[..^"Encounter".Length])
+            : null);
+
+    private const string EncounterSuffix = "MercenaryEncounter";
 
     public static MercBuild BuildForHash(ushort hash) =>
         BuildsByHash.TryGetValue(hash, out var build) ? build : null;

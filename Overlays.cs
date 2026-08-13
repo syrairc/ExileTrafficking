@@ -73,7 +73,7 @@ internal sealed class TextBlock
 // one hireable mercenary standing in the zone, resolved once a frame and shared by the overlays that
 // want it. the area line needs the same walk the world overlay does, so doing it twice would be waste
 public sealed record MercSighting(Entity Entity, MercBuild Build, bool Certain, bool Infamous,
-    IReadOnlyList<string> Skills, int Level);
+    bool Active, IReadOnlyList<string> Skills, int Level);
 
 public static class WorldOverlay
 {
@@ -104,6 +104,12 @@ public static class WorldOverlay
         return names;
     }
 
+    // encounter_state 1 is the offer you can actually walk up to and talk to. the spares an infamy
+    // scarab drops sit at 8 with their minimap icon hidden, and one you've already hired reads 0
+    public static bool IsActive(Entity entity) =>
+        entity.TryGetComponent<StateMachine>(out var machine) &&
+        machine?.States?.Any(x => x.Name == "encounter_state" && x.Value == 1) == true;
+
     public static List<MercSighting> Sightings(GameController game)
     {
         var found = new List<MercSighting>();
@@ -126,11 +132,16 @@ public static class WorldOverlay
             var infamous = MercData.TypeOptionForHash(hash)?
                 .EndsWith("Noble", StringComparison.Ordinal) == true;
 
-            found.Add(new MercSighting(entity, build, certain, infamous, skills,
+            found.Add(new MercSighting(entity, build, certain, infamous, IsActive(entity), skills,
                 MercData.Level(entity.Path)));
         }
 
-        return found;
+        // a scarab can put three in the map, so keep them in a stable order: the real offer first,
+        // then the wild ones nearest out
+        return found
+            .OrderByDescending(x => x.Active)
+            .ThenBy(x => x.Entity.DistancePlayer)
+            .ToList();
     }
 
     // text is centre aligned on x, so the block is as wide as its widest line
@@ -146,19 +157,25 @@ public static class WorldOverlay
 
         foreach (var sighting in sightings)
         {
+            if (!sighting.Active && !settings.WildOverlay) continue;
+
             var entity = sighting.Entity;
             var skills = sighting.Skills;
             var buildId = sighting.Build?.Id;
 
             Block.Clear();
-            Block.Add(graphics, Header(sighting), settings.HeaderColor.Value);
+            Block.Add(graphics, Header(sighting, settings), settings.HeaderColor.Value);
 
+            // a wild mercenary is not an offer, so rating its skills or calling a verdict on it is
+            // noise. name and pool only
             foreach (var skill in skills)
             {
-                Block.Add(graphics, skill, Ratings.Colour(Ratings.Skill(settings.Ratings, buildId, skill), settings));
+                Block.Add(graphics, skill, sighting.Active
+                    ? Ratings.Colour(Ratings.Skill(settings.Ratings, buildId, skill), settings)
+                    : settings.NeutralColor.Value);
             }
 
-            if (settings.OverlayVerdict)
+            if (settings.OverlayVerdict && sighting.Active)
             {
                 var verdict = Ratings.Verdict(settings.Ratings, buildId, skills);
                 Block.Add(graphics, Word(verdict), Ratings.Colour(verdict, settings));
@@ -192,11 +209,15 @@ public static class WorldOverlay
         }
     }
 
-    public static string Header(MercSighting sighting) =>
-        sighting.Build == null
-            ? $"UNKNOWN  LVL {sighting.Level}"
+    public static string Header(MercSighting sighting, ExileTraffickingSettings settings)
+    {
+        var level = settings.ShowLevel ? $"  LVL {sighting.Level}" : "";
+
+        return sighting.Build == null
+            ? $"UNKNOWN{level}"
             : $"{MercData.DisplayName(sighting.Build, sighting.Infamous).ToUpperInvariant()}" +
-              $"{(sighting.Certain ? "" : "?")}  LVL {sighting.Level}";
+              $"{(sighting.Certain ? "" : "?")}{level}";
+    }
 
     private static string Word(Rating rating) => rating switch
     {
@@ -258,7 +279,7 @@ public static class WarrantTooltip
         using var _ = graphics.SetTextScale(settings.OverlayFontSize.Value / 16f);
 
         Block.Clear();
-        Block.Add(graphics, Header(merc), settings.HeaderColor.Value);
+        Block.Add(graphics, Header(merc, settings), settings.HeaderColor.Value);
 
         foreach (var skill in merc.Skills)
         {
@@ -307,16 +328,18 @@ public static class WarrantTooltip
         return merc;
     }
 
-    private static string Header(MemMerc merc)
+    private static string Header(MemMerc merc, ExileTraffickingSettings settings)
     {
+        var level = settings.ShowLevel ? $"  LVL {merc.Level}" : "";
+
         var build = merc.Build;
-        if (build == null) return $"UNKNOWN BUILD {merc.BuildHash}  LVL {merc.Level}";
+        if (build == null) return $"UNKNOWN BUILD {merc.BuildHash}{level}";
 
         // infamous rows fold to the same build, the trade option is the only thing that keeps the
         // two apart, and it's the name the game prints
         var infamous = MercData.TypeOptionForHash(merc.BuildHash)?.EndsWith("Noble", StringComparison.Ordinal) == true;
 
-        return $"{MercData.DisplayName(build, infamous).ToUpperInvariant()}  LVL {merc.Level}";
+        return $"{MercData.DisplayName(build, infamous).ToUpperInvariant()}{level}";
     }
 }
 
@@ -343,7 +366,7 @@ public static class AreaMercenaryOverlay
         Block.Clear();
         if (sighting != null)
         {
-            Block.Add(graphics, WorldOverlay.Header(sighting), settings.HeaderColor.Value);
+            Block.Add(graphics, WorldOverlay.Header(sighting, settings), settings.HeaderColor.Value);
 
             if (settings.AreaSkills)
             {

@@ -116,7 +116,10 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
             if (areaMercenary != null && Settings.AreaMercenary)
             {
-                AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary, sightings.FirstOrDefault(),
+                // only the real offer upgrades the line. wild mercenaries aren't what the zone rolled,
+                // so with none of them active it stays on the class it preloaded with
+                AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary,
+                    sightings.FirstOrDefault(x => x.Active),
                     GameController.Window.GetWindowRectangleTimeCache);
             }
 
