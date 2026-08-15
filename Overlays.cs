@@ -294,7 +294,8 @@ public static class WarrantTooltip
             }
         }
 
-        Block.Add(graphics, $"press [{settings.WarrantSearchKey.Value.Key}] to search trade", HintColor);
+        Block.Add(graphics, $"[{settings.WarrantSearchKey.Value.Key}] trade   " +
+                            $"[{settings.WarrantPriceCheckKey.Value.Key}] price check", HintColor);
 
         var w = Block.Width + Padding * 2f;
         var h = Block.Height + Padding * 2f;

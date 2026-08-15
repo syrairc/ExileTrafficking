@@ -80,6 +80,9 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Warrant trade search key", "Searches trade for the warrant you're hovering.")]
     public HotkeyNodeV2 WarrantSearchKey { get; set; } = new HotkeyNodeV2(Keys.NumPad0);
 
+    [Menu("Warrant price check key", "Copies the warrant you're hovering and opens the price check site.")]
+    public HotkeyNodeV2 WarrantPriceCheckKey { get; set; } = new HotkeyNodeV2(Keys.NumPad1);
+
     [Menu("Overlay font size")]
     public RangeNode<int> OverlayFontSize { get; set; } = new RangeNode<int>(16, 8, 48);
 

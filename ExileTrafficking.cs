@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using ExileCore;
 using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.MemoryObjects;
@@ -149,6 +150,7 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
                 // only listens while you're actually on a warrant, so a plain letter key is fine
                 if (Settings.WarrantSearchKey.PressedOnce()) Open(FromMemory(warrant.Merc, Settings));
+                if (Settings.WarrantPriceCheckKey.PressedOnce()) PriceCheck(warrant.Merc);
             }
 
             if (snapshot == null) return;
@@ -168,10 +170,15 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 if (ImGui.Begin("##mercsearch",
                         ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove |
                         ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBackground |
-                        ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing) &&
-                    ImGui.Button("Trade Search", new Vector2(160f, buttonHeight)))
+                        ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing))
                 {
-                    Search(snapshot);
+                    if (ImGui.Button("Trade Search", new Vector2(160f, buttonHeight))) Search(snapshot);
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("Price Check", new Vector2(160f, buttonHeight)))
+                    {
+                        PriceCheck(MercenaryMemory.Encounter(GameController));
+                    }
                 }
             }
             finally
@@ -339,6 +346,54 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
         }
 
         return QueryJson(typeOption, skills, settings, MercData.BuildForArchetype(snapshot.Archetype)?.Id);
+    }
+
+    private const string PriceCheckUrl = "https://xddbsns.com/mercenary-price-check.html";
+
+    // the site takes no url parameters, so the merc rides over on the clipboard in the same tooltip
+    // shape the game's own Ctrl+C gives, and you paste it there. sections split on the dashes, the
+    // Build line is what the parser anchors on, and everything after it reads as a skill
+    public static string WarrantText(MemMerc merc)
+    {
+        var build = merc?.Build;
+        if (build == null || merc.Skills.Count == 0) return null;
+
+        var infamous = MercData.TypeOptionForHash(merc.BuildHash)?.EndsWith("Noble", StringComparison.Ordinal) == true;
+
+        var text = new StringBuilder();
+        text.AppendLine($"Build: {MercData.DisplayName(build, infamous)}");
+        text.AppendLine($"Mercenary Level: {merc.Level}");
+
+        var wrote = false;
+        foreach (var skill in merc.Skills)
+        {
+            var name = MercData.SkillName(skill.TradeId);
+            if (name == null) continue;
+
+            text.AppendLine("--------");
+            text.AppendLine(name);
+            wrote = true;
+
+            // a support line the parser can't read takes its whole skill down with it, so an unknown
+            // name or tier gets dropped rather than written out broken
+            foreach (var hash in skill.Supports)
+            {
+                var support = MercData.SupportName($"mercenary.support_{hash}");
+                var tier = MercData.SupportTier(hash);
+                if (support != null && tier > 0) text.AppendLine($"{support} (Tier: {tier})");
+            }
+        }
+
+        return wrote ? text.ToString() : null;
+    }
+
+    private void PriceCheck(MemMerc merc)
+    {
+        var text = WarrantText(merc);
+        if (text == null) return;
+
+        ImGui.SetClipboardText(text);
+        Process.Start(new ProcessStartInfo(PriceCheckUrl) { UseShellExecute = true });
     }
 
     // the handler descriptor already carries trade ids, so this path never touches panel text

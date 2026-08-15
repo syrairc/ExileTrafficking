@@ -66,6 +66,7 @@ public static class MercData
     private static readonly Dictionary<string, MercBuild> BuildsByArchetype;
     private static readonly Dictionary<ushort, MercBuild> BuildsByHash;
     private static readonly Dictionary<ushort, string> TypeOptionsByHash;
+    private static readonly Dictionary<ushort, int> SupportTiers;
 
     public static IReadOnlyDictionary<string, MercBuild> Builds => BuildsById;
     public static IReadOnlyList<MercBuild> BuildsByName { get; }
@@ -104,7 +105,17 @@ public static class MercData
         {
             if (ushort.TryParse(hash, out var key)) TypeOptionsByHash[key] = option;
         }
+
+        SupportTiers = new Dictionary<ushort, int>();
+        var tiers = root["supportTiers"]?.ToObject<Dictionary<string, int>>() ?? new Dictionary<string, int>();
+        foreach (var (hash, tier) in tiers)
+        {
+            if (ushort.TryParse(hash, out var key)) SupportTiers[key] = tier;
+        }
     }
+
+    // 0 when unknown. the panel never prints a tier but a pasted warrant carries one
+    public static int SupportTier(ushort hash) => SupportTiers.TryGetValue(hash, out var tier) ? tier : 0;
 
     public static string SkillId(string tradeName) => Get(SkillIds, tradeName);
     public static string SupportId(string tradeName) => Get(SupportIds, tradeName);
