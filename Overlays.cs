@@ -7,6 +7,7 @@ using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.Elements.InventoryElements;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Enums;
+using ExileCore.Shared.Helpers;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 
@@ -402,6 +403,54 @@ public static class AreaMercenaryOverlay
     // full strength behind the text is unreadable, so keep the hue and drop it to backdrop darkness
     private static Color Wash(Color color) =>
         new((byte)(color.R * 0.35f), (byte)(color.G * 0.35f), (byte)(color.B * 0.35f), TextBlock.Backdrop.A);
+}
+
+// the mercenary's room, marked where it sits. MercenaryMemory.AreaMercRooms is what finds them,
+// this only puts them on screen
+public static class MercRooms
+{
+    // large map only, on purpose. the small minimap is too cramped for a text label and the room is
+    // usually off the edge of it anyway
+    public static void Draw(GameController game, Graphics graphics, ExileTraffickingSettings settings,
+        IReadOnlyList<Vector2> rooms, string label)
+    {
+        var map = game.IngameState.IngameUi.Map;
+        if (map?.LargeMap is not { IsVisibleLocal: true } large) return;
+
+        // hidden behind the small minimap means the large one is only the faded backdrop
+        if (map.SmallMiniMap is { IsValid: true, IsVisibleLocal: true }) return;
+
+        var render = game.Player?.GetComponent<Render>();
+        if (render == null) return;
+
+        var window = game.Window.GetWindowRectangleTimeCache;
+        var center = large.MapCenter;
+        var scale = large.MapScale;
+        var player = render.PosNum.WorldToGrid();
+        var height = -render.UnclampedHeight;
+        var terrain = game.IngameState.Data;
+
+        using var _ = graphics.SetTextScale(settings.AreaTextScale.Value);
+
+        foreach (var grid in rooms)
+        {
+            var deltaZ = (height + terrain.GetTerrainHeightAt(grid)) * PoeMapExtension.WorldToGridConversion;
+            var at = center + Project(grid - player, deltaZ, scale);
+            if (!window.Contains(at.X, at.Y)) continue;
+
+            graphics.DrawText(label, at, settings.HeaderColor.Value, FontAlign.Center);
+        }
+    }
+
+    // the map is drawn isometric, so a grid delta has to be rotated into that view before it lands
+    private static Vector2 Project(Vector2 delta, float deltaZ, float scale) =>
+        scale * Vector2.Multiply(
+            new Vector2(delta.X - delta.Y, deltaZ - (delta.X + delta.Y)),
+            new Vector2(CameraAngleCos, CameraAngleSin));
+
+    private const float CameraAngle = 38.7f * MathF.PI / 180f;
+    private static readonly float CameraAngleCos = MathF.Cos(CameraAngle);
+    private static readonly float CameraAngleSin = MathF.Sin(CameraAngle);
 }
 
 // rated skills and supports get a frame drawn round the game's own panel widgets

@@ -1,9 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore;
 using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.MemoryObjects;
+using ExileCore.Shared.Helpers;
 using ExileCore.Shared.Interfaces;
+using Vector2 = System.Numerics.Vector2;
 
 namespace ExileTrafficking;
 
@@ -111,6 +114,46 @@ public static class MercenaryMemory
         {
             return -1;
         }
+    }
+
+    // grid centres of the rooms the mercenary encounter gets placed in. the area's layout is
+    // generated at zone load, so this is known just as early as the class is. the room file living
+    // under Mercenaries/ is the whole test, and Connections/ is the corridor pieces between rooms
+    public static List<Vector2> AreaMercRooms(GameController game)
+    {
+        var found = new List<Vector2>();
+
+        try
+        {
+            var graphs = game?.IngameState?.Data?.AreaGraphs;
+            if (graphs == null) return found;
+
+            var tile = PoeMapExtension.TileToGridConversion;
+
+            foreach (var graph in graphs)
+            {
+                var rooms = graph?.Rooms;
+                if (rooms == null) continue;
+
+                foreach (var room in rooms)
+                {
+                    var path = room?.Name;
+                    if (path == null) continue;
+                    if (!path.Contains("/Mercenaries/", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (path.Contains("/Connections/", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    found.Add(new Vector2(
+                        (room.MinCoord.X + room.MaxCoord.X) * 0.5f * tile,
+                        (room.MinCoord.Y + room.MaxCoord.Y) * 0.5f * tile));
+                }
+            }
+        }
+        catch
+        {
+            found.Clear();
+        }
+
+        return found;
     }
 
     // MechanicHandlers is every league mechanic's state object in one list, each tagged with its

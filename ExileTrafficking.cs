@@ -75,10 +75,16 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
     private MercClass areaMercenary;
     private int areaAttempts;
 
+    // grid centres of the zone's mercenary rooms, read off the area graph the same way
+    private List<Vector2> mercRooms = new();
+    private int roomAttempts;
+
     public override void AreaChange(AreaInstance area)
     {
         areaMercenary = null;
         areaAttempts = AreaResolveAttempts;
+        mercRooms = new List<Vector2>();
+        roomAttempts = AreaResolveAttempts;
     }
 
     // the area plugin vector isn't populated the instant AreaChange fires, so keep asking for a
@@ -87,14 +93,25 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
 
     public override Job Tick()
     {
-        if (areaMercenary != null || areaAttempts <= 0) return null;
         if (!GameController.InGame || GameController.IsLoading) return null;
 
-        areaAttempts--;
-        areaMercenary = MercData.ClassAt(MercenaryMemory.AreaClass(GameController));
+        if (areaMercenary == null && areaAttempts > 0)
+        {
+            areaAttempts--;
+            areaMercenary = MercData.ClassAt(MercenaryMemory.AreaClass(GameController));
 
-        // AreaChange is what clears areaMercenary, so this can only land once a zone
-        if (areaMercenary != null) Alert(areaMercenary);
+            // AreaChange is what clears areaMercenary, so this can only land once a zone
+            if (areaMercenary != null) Alert(areaMercenary);
+        }
+
+        // the graph fills at the same point in the load as the plugin vector does, so it gets the
+        // same patience before the zone is written off as having no rooms
+        if (mercRooms.Count == 0 && roomAttempts > 0)
+        {
+            roomAttempts--;
+            mercRooms = MercenaryMemory.AreaMercRooms(GameController);
+        }
+
         return null;
     }
 
@@ -122,6 +139,12 @@ public class ExileTrafficking : BaseSettingsPlugin<ExileTraffickingSettings>
                 AreaMercenaryOverlay.Draw(Graphics, Settings, areaMercenary,
                     sightings.FirstOrDefault(x => x.Active),
                     GameController.Window.GetWindowRectangleTimeCache);
+            }
+
+            if (Settings.MercRoomOnMap && mercRooms.Count > 0)
+            {
+                MercRooms.Draw(GameController, Graphics, Settings, mercRooms,
+                    areaMercenary != null ? $"Merc: {areaMercenary.Archetype}" : "Merc");
             }
 
             var ui = GameController.IngameState.IngameUi;

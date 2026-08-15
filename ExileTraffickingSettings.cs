@@ -52,6 +52,9 @@ public class ExileTraffickingSettings : ISettings
     [Menu("Show the area's mercenary class", "Read at zone load, before the mercenary spawns.")]
     public ToggleNode AreaMercenary { get; set; } = new ToggleNode(true);
 
+    [Menu("Mark the mercenary room on the large map", "Off the area's room graph, known at zone load.")]
+    public ToggleNode MercRoomOnMap { get; set; } = new ToggleNode(true);
+
     [Menu("Area line X inset", "From the right edge of the screen.")]
     public RangeNode<int> AreaOffsetX { get; set; } = new RangeNode<int>(320, 0, 3000);
 
