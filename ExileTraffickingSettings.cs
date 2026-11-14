@@ -240,7 +240,7 @@ public static class SettingsUi
             var open = ImGui.CollapsingHeader(label);
 
             // riding the header line keeps the archetype's own rating readable while it's collapsed
-            var ratingX = ImGui.GetContentRegionMax().X - Columns[1].Width - 6f;
+            var ratingX = (ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X) - Columns[1].Width - 6f;
 
             ImGui.SameLine(ratingX - ImGui.CalcTextSize(SoundLabel).X - 12f);
             Sound(settings, build.Id);
@@ -354,7 +354,7 @@ public static class SettingsUi
         ImGui.SameLine();
         if (ImGui.Button("Paste"))
         {
-            importText = ImGui.GetClipboardText() ?? "";
+            importText = ImGui.GetClipboardTextS() ?? "";
         }
 
         if (ImGui.Button("Read string"))
