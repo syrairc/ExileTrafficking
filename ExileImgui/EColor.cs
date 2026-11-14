@@ -71,7 +71,8 @@ public static class EColor
             h ^= ch;
             h *= 16777619u;
         }
-        ImGui.ColorConvertHSVtoRGB((h % 360u) / 360f, 0.55f, 0.95f, out float r, out float g, out float b);
+        float r = 0, g = 0, b = 0;
+        ImGui.ColorConvertHSVtoRGB((h % 360u) / 360f, 0.55f, 0.95f, ref r, ref g, ref b);
         return new SColor((byte)(r * 255), (byte)(g * 255), (byte)(b * 255), (byte)255);
     }
 

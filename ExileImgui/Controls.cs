@@ -251,7 +251,7 @@ public static class Controls
             {
                 var (uv0, uv1) = CellUv(sh, b.Cell);
                 float iy = min.Y + (size.Y - iconSize) * 0.5f;
-                dl.AddImage(sh.TexId, new Vector2(iconX, iy), new Vector2(iconX + iconSize, iy + iconSize),
+                dl.AddImage(new ImTextureRef { TexID = sh.TexId }, new Vector2(iconX, iy), new Vector2(iconX + iconSize, iy + iconSize),
                     uv0, uv1, fg);
             }
             dl.AddText(new Vector2(textX, min.Y + (size.Y - ts.Y) * 0.5f), fg, label);
@@ -448,12 +448,17 @@ public static class Controls
         {
             var (uv0, uv1) = CellUv(sh, b.Cell);
             float iy = min.Y + (hgt - iconSize) * 0.5f;
-            dl.AddImage(sh.TexId, new Vector2(x, iy), new Vector2(x + iconSize, iy + iconSize), uv0, uv1, fg);
+            dl.AddImage(new ImTextureRef { TexID = sh.TexId }, new Vector2(x, iy), new Vector2(x + iconSize, iy + iconSize), uv0, uv1, fg);
             x += iconSize + style.ItemInnerSpacing.X * 2;
         }
         float y = min.Y + (hgt - th) * 0.5f;
         dl.AddText(new Vector2(x, y), fg, top);
-        if (sub.Length > 0) dl.AddText(ImGui.GetFont(), subPx, new Vector2(x, y + t0.Y + gap), dim, sub);
+        if (sub.Length > 0)
+        {
+            ImGui.PushFont(ImGui.GetFont(), ImGui.GetStyle().FontSizeBase * SubScale);
+            dl.AddText(new Vector2(x, y + t0.Y + gap), dim, sub);
+            ImGui.PopFont();
+        }
         ImGui.PopID();
         return clicked;
     }
@@ -869,7 +874,7 @@ public static class Controls
     public static void IconImage(IntPtr texId, Vector2 uv0, Vector2 uv1, float size, SColor tint)
     {
         if (texId == IntPtr.Zero) { ImGui.Dummy(new Vector2(size, size)); return; }
-        ImGui.Image(texId, new Vector2(size, size), uv0, uv1, EColor.ToVector4(tint));
+        ImGui.ImageWithBg(new ImTextureRef { TexID = texId }, new Vector2(size, size), uv0, uv1, Vector4.Zero, EColor.ToVector4(tint));
     }
 
     /// <summary>Same, for the game's own Icons.png, where <see cref="MapIconsIndex"/> picks the cell.</summary>
@@ -1033,7 +1038,7 @@ public static class Controls
         using (new EColor.StyleColorScope((ImGuiCol.Button, 0u)))
             clicked = sheets[cur].TexId == IntPtr.Zero
                 ? ImGui.Button("?##pick", new Vector2(size, size))     // sheet never loaded - still openable
-                : ImGui.ImageButton("##pick", sheets[cur].TexId, new Vector2(size, size), u0, u1, Vector4.Zero, tintV);
+                : ImGui.ImageButton("##pick", new ImTextureRef { TexID = sheets[cur].TexId }, new Vector2(size, size), u0, u1, Vector4.Zero, tintV);
         if (clicked)
         {
             _pickerSheet[id] = cur;        // open on the sheet the value already lives in
@@ -1071,7 +1076,7 @@ public static class Controls
                     float px = Math.Clamp(drawSize, minSize, maxSize);
                     var (p0, p1) = CellUv(sheets[cur], index);   // the stored value, not the sheet being browsed
                     var at = org + new Vector2((box - px) * 0.5f, (box - px) * 0.5f);
-                    dl.AddImage(sheets[cur].TexId, at, at + new Vector2(px), p0, p1, EColor.U32(tint));
+                    dl.AddImage(new ImTextureRef { TexID = sheets[cur].TexId }, at, at + new Vector2(px), p0, p1, EColor.U32(tint));
                 }
                 ImGui.SameLine();
                 ImGui.BeginGroup();
@@ -1104,7 +1109,7 @@ public static class Controls
             {
                 var style = ImGui.GetStyle();
                 float step = cell + style.ItemSpacing.X + style.FramePadding.X * 2;
-                ImGui.BeginChild("##grid", new Vector2(columns * step + 12f, 320f), ImGuiChildFlags.Border);
+                ImGui.BeginChild("##grid", new Vector2(columns * step + 12f, 320f), ImGuiChildFlags.Borders);
                 int col = 0;
                 // transparent cell frames, same as the preview button: a grid of button plates buries the
                 // sprites you're trying to compare. hover/press still highlight.
@@ -1114,7 +1119,7 @@ public static class Controls
                     var name = sh.Label?.Invoke(i);
                     if (name != null && !Text.Matches(filter, name)) continue;
                     var (c0, c1) = CellUv(sh, i);
-                    if (ImGui.ImageButton("c" + i, sh.TexId, new Vector2(cell, cell), c0, c1, Vector4.Zero, tintV))
+                    if (ImGui.ImageButton("c" + i, new ImTextureRef { TexID = sh.TexId }, new Vector2(cell, cell), c0, c1, Vector4.Zero, tintV))
                     {
                         sheet = sh.Name;
                         index = i;
@@ -1200,7 +1205,7 @@ public static class Controls
 
         float padY = ImGui.GetStyle().FramePadding.Y;
         float rowH = ImGui.GetFrameHeight();     // unscaled, so a grid of these keeps normal row height
-        ImGui.SetWindowFontScale(glyphScale);
+        ImGui.PushFont(ImGui.GetFont(), ImGui.GetStyle().FontSizeBase * glyphScale);
         // the scaled glyph has to FIT the frame: imgui only centres text vertically while there's room,
         // and pins it to the top padding once it overflows (reads as a dropped, top-heavy glyph). so the
         // box grows to the scaled line height when it has to, and stays at row height when it doesn't.
@@ -1212,7 +1217,7 @@ public static class Controls
                 v = CycleTri(v, ImGui.GetIO().KeyShift);
                 changed = true;
             }
-        ImGui.SetWindowFontScale(1f);
+        ImGui.PopFont();
         float btnH = ImGui.GetItemRectSize().Y;
         if (ImGui.IsItemClicked(ImGuiMouseButton.Right) && v != 0) { v = 0; changed = true; }
         if (!string.IsNullOrEmpty(label))
